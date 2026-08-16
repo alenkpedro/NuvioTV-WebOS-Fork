@@ -380,6 +380,11 @@ function encodeFromText(parsedCodec, search = "") {
 function languageFor(value = "") {
   const normalized = String(value || "").toLowerCase();
   const compact = normalized.replace(/[^a-z0-9]/g, "");
+  if (
+    ["ptbr", "pob", "porbr", "brazilianportuguese", "portuguesbrasil"].includes(compact)
+  ) {
+    return "PT_BR";
+  }
   return (
     Object.entries(LANGUAGE_LABELS).find(([, [code, label]]) => {
       const normalizedCode = String(code || "").toLowerCase();
@@ -397,13 +402,23 @@ function languagesFromText(parsedLanguages = [], search = "") {
   const fromParsed = (Array.isArray(parsedLanguages) ? parsedLanguages : [])
     .map(languageFor)
     .filter(Boolean);
-  if (fromParsed.length) {
-    return fromParsed;
-  }
+  const explicitPtBr =
+    /(^|[^a-z0-9])(pt[ ._-]?br|ptbr|pob|por[ ._-]?br|portugu[eê]s(?:[ ._-]+do)?[ ._-]+brasil|portuguese[ ._-]+br(?:azil)?|brazilian[ ._-]+portuguese)([^a-z0-9]|$)/i.test(
+      search
+    );
+  const dubbed = /\b(dublado|dublagem|dubbed)\b/i.test(search);
+  const dualAudio = /\bdual[ ._-]+(audio|áudio)\b/i.test(search);
   const matches = Object.entries(LANGUAGE_LABELS)
     .filter(([, [code]]) => hasToken(search, code))
     .map(([key]) => key);
-  return matches.includes("PT_BR") ? matches.filter((key) => key !== "PT") : matches;
+  const combined = [
+    ...(explicitPtBr || dubbed ? ["PT_BR"] : []),
+    ...(dualAudio ? ["MULTI"] : []),
+    ...fromParsed,
+    ...matches
+  ];
+  const unique = [...new Set(combined)];
+  return unique.includes("PT_BR") ? unique.filter((key) => key !== "PT") : unique;
 }
 
 function releaseGroupFromText(text = "") {

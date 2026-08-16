@@ -3,10 +3,13 @@
 // streams shown in the picker and the user's auto-play settings, it returns the
 // stream that should play automatically, or null to leave the picker open.
 
+import { rankSmartStreams } from "./smartStreamScoring.js";
+
 export const STREAM_AUTO_PLAY_MODE = {
   MANUAL: "MANUAL",
   FIRST_STREAM: "FIRST_STREAM",
-  REGEX_MATCH: "REGEX_MATCH"
+  REGEX_MATCH: "REGEX_MATCH",
+  SMART: "SMART"
 };
 
 export const STREAM_AUTO_PLAY_SOURCE = {
@@ -48,6 +51,9 @@ export function isRegexSelectionConfigured(regexPattern) {
 export function isAutoPlayEffectivelyEnabled(settings = {}) {
   const mode = normalizeMode(settings.streamAutoPlayMode);
   if (mode === STREAM_AUTO_PLAY_MODE.FIRST_STREAM) {
+    return true;
+  }
+  if (mode === STREAM_AUTO_PLAY_MODE.SMART) {
     return true;
   }
   if (mode === STREAM_AUTO_PLAY_MODE.REGEX_MATCH) {
@@ -182,6 +188,19 @@ export function selectAutoPlayStream(streams, options = {}) {
 
   if (mode === STREAM_AUTO_PLAY_MODE.FIRST_STREAM) {
     return candidates.find((stream) => isPlayableStream(stream)) || null;
+  }
+
+  if (mode === STREAM_AUTO_PLAY_MODE.SMART) {
+    const ranked = rankSmartStreams(candidates.filter((stream) => isPlayableStream(stream)), {
+      webOs: options.webOs !== false
+    });
+    const best = ranked[0];
+    return best
+      ? {
+          ...best.stream,
+          smartSelection: best.analysis
+        }
+      : null;
   }
 
   // REGEX_MATCH

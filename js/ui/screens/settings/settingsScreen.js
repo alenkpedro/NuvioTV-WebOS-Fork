@@ -339,6 +339,12 @@ const STREAM_AUTOPLAY_MODE_OPTIONS = [
     labelKey: "autoplay_mode_regex",
     captionKey: "autoplay_mode_regex_desc",
     label: "Auto-play regex match"
+  },
+  {
+    id: "SMART",
+    labelKey: "autoplay_mode_smart",
+    captionKey: "autoplay_mode_smart_desc",
+    label: "Smart selection"
   }
 ];
 
@@ -5056,6 +5062,11 @@ export const SettingsScreen = {
       this.actionMap.set("integration:mdblist:enabled", () => {
         MdbListSettingsStore.set({ enabled: !MdbListSettingsStore.get().enabled });
       });
+      this.actionMap.set("integration:mdblist:tracking", () => {
+        MdbListSettingsStore.set({
+          trackingEnabled: !MdbListSettingsStore.get().trackingEnabled
+        });
+      });
       this.actionMap.set("integration:mdblist:key", () => {
         this.openTextDialog({
           title: t("settings.integration.mdblist.dialog.title"),
@@ -5124,6 +5135,13 @@ export const SettingsScreen = {
               subtitle: t("settings.integration.mdblist.apiKey.subtitle"),
               value: maskValue(model.mdbList.apiKey, t("common.notSet")),
               disabled: !model.mdbList.enabled
+            })}
+            ${this.renderToggleRow({
+              focusKey: "integration:mdblist:tracking",
+              title: t("settings.integration.mdblist.tracking.title"),
+              subtitle: t("settings.integration.mdblist.tracking.subtitle"),
+              checked: Boolean(model.mdbList.trackingEnabled),
+              disabled: !model.mdbList.enabled || !model.mdbList.apiKey
             })}
             ${[
               ["trakt", "showTrakt"],
@@ -7026,6 +7044,9 @@ export const SettingsScreen = {
       await this.render({ refreshModel: false });
     });
     this.actionMap.set("about:debugConsole", () => Router.navigate("debugConsole"));
+    this.actionMap.set("about:ysosrs123", () => {
+      window.open?.("https://github.com/ysosrs123/NuvioTV-Fork", "_blank");
+    });
 
     return `
       ${this.renderSectionHeader(SECTION_META.find((item) => item.id === "about"))}
@@ -7035,8 +7056,16 @@ export const SettingsScreen = {
           <p class="settings-about-copy">${t("settings.about.madeWithLove")}</p>
           <p class="settings-about-copy">${t("settings.about.version", { version: SETTINGS_VERSION_LABEL })}</p>
           <p class="settings-about-copy">${t("settings.about.portedBy")}</p>
+          <p class="settings-about-copy">${t("settings.about.webosForkCredit")}</p>
+          <p class="settings-about-copy">${t("settings.about.forkCredit")}</p>
         </div>
         <div class="settings-stack">
+          ${this.renderActionRow({
+            focusKey: "about:ysosrs123",
+            title: t("settings.about.forkSource.title"),
+            subtitle: t("settings.about.forkSource.subtitle"),
+            external: true
+          })}
           ${this.renderActionRow({
             focusKey: "about:checkUpdates",
             title: t("about_check_updates", {}, "Check for updates"),

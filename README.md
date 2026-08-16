@@ -84,14 +84,14 @@ Download the latest `.wgt` package from [GitHub Releases](https://github.com/Nuv
 - Enter:
 
 ```text
-https://raw.githubusercontent.com/NuvioMedia/NuvioTVWebOS/main/webosbrew/apps.json
+https://raw.githubusercontent.com/alenkpedro/NuvioTV-WebOS-Fork/main/webosbrew/apps.json
 ```
 
 - Return to the apps list and install Nuvio TV.
 
 #### Manual IPK install
 
-Download the latest `.ipk` package from [GitHub Releases](https://github.com/NuvioMedia/NuvioWeb/releases/latest).
+Download the latest `.ipk` package from [this fork's GitHub Releases](https://github.com/alenkpedro/NuvioTV-WebOS-Fork/releases/latest).
 
 Enable Developer Mode and Key Server by following the webOS Homebrew guide:
 
@@ -104,7 +104,7 @@ Then install the package with webOS Dev Manager or your preferred webOS developm
 ## Platform Repositories
 
 - TizenBrew wrapper: `NuvioMedia/NuvioTVTizen`
-- webOS metadata repository: `NuvioMedia/NuvioTVWebOS`
+- Pedro Alencar's webOS fork and Homebrew metadata: `alenkpedro/NuvioTV-WebOS-Fork`
 - Desktop installer: `NuvioMedia/NuvioWebTVInstaller`
 
 ## Development
@@ -120,8 +120,8 @@ Then install the package with webOS Dev Manager or your preferred webOS developm
 ### Setup
 
 ```bash
-git clone https://github.com/NuvioMedia/NuvioWeb.git
-cd NuvioWeb
+git clone https://github.com/alenkpedro/NuvioTV-WebOS-Fork.git
+cd NuvioTV-WebOS-Fork
 npm install
 ```
 
@@ -260,6 +260,13 @@ The shared web app remains the source of truth for the TV experience across thes
 
 This project is part of the Nuvio TV ecosystem and builds on important community work:
 
+This fork installs on LG webOS as **Nuvio-test** using the independent app ID
+`com.nuvio.tv.test`, matching the identity scheme used by ysosrs123's Android fork.
+
+- **Pedro Alencar**
+  Created and maintains this webOS fork adaptation, integrating the portable
+  functionality and credits from the Android optimisation fork into NuvioWeb.
+
 - **tapframe/NuvioTV**  
   The original Android TV project that shaped the TV-first product direction.  
   https://github.com/tapframe/NuvioTV
@@ -267,6 +274,12 @@ This project is part of the Nuvio TV ecosystem and builds on important community
 - **WhiteGiso/NuvioTV-WebOS**  
   The community webOS codebase that served as an early inspiration and base for this shared web version.  
   https://github.com/WhiteGiso/NuvioTV-WebOS
+
+- **ysosrs123/NuvioTV-Fork**
+  The Android TV optimisation fork whose MDBList playback-tracking behaviour,
+  measured API findings, and performance-oriented product direction were adapted
+  for this webOS fork. All derived work remains under GPL-3.0.
+  https://github.com/ysosrs123/NuvioTV-Fork
 
 NuvioTV Web expands that foundation into a shared smart TV web app for Samsung Tizen and LG webOS.
 
@@ -300,13 +313,13 @@ For comprehensive legal information, including our full disclaimer, third-party 
 
 <!-- MARKDOWN LINKS & IMAGES -->
 
-[contributors-shield]: https://img.shields.io/github/contributors/NuvioMedia/NuvioWeb.svg?style=for-the-badge
-[contributors-url]: https://github.com/NuvioMedia/NuvioWeb/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/NuvioMedia/NuvioWeb.svg?style=for-the-badge
-[forks-url]: https://github.com/NuvioMedia/NuvioWeb/network/members
-[stars-shield]: https://img.shields.io/github/stars/NuvioMedia/NuvioWeb.svg?style=for-the-badge
-[stars-url]: https://github.com/NuvioMedia/NuvioWeb/stargazers
-[issues-shield]: https://img.shields.io/github/issues/NuvioMedia/NuvioWeb.svg?style=for-the-badge
-[issues-url]: https://github.com/NuvioMedia/NuvioWeb/issues
-[license-shield]: https://img.shields.io/github/license/NuvioMedia/NuvioWeb.svg?style=for-the-badge
-[license-url]: https://github.com/NuvioMedia/NuvioWeb/blob/main/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/alenkpedro/NuvioTV-WebOS-Fork.svg?style=for-the-badge
+[contributors-url]: https://github.com/alenkpedro/NuvioTV-WebOS-Fork/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/alenkpedro/NuvioTV-WebOS-Fork.svg?style=for-the-badge
+[forks-url]: https://github.com/alenkpedro/NuvioTV-WebOS-Fork/network/members
+[stars-shield]: https://img.shields.io/github/stars/alenkpedro/NuvioTV-WebOS-Fork.svg?style=for-the-badge
+[stars-url]: https://github.com/alenkpedro/NuvioTV-WebOS-Fork/stargazers
+[issues-shield]: https://img.shields.io/github/issues/alenkpedro/NuvioTV-WebOS-Fork.svg?style=for-the-badge
+[issues-url]: https://github.com/alenkpedro/NuvioTV-WebOS-Fork/issues
+[license-shield]: https://img.shields.io/github/license/alenkpedro/NuvioTV-WebOS-Fork.svg?style=for-the-badge
+[license-url]: https://github.com/alenkpedro/NuvioTV-WebOS-Fork/blob/main/LICENSE

@@ -309,6 +309,10 @@
     <string name="about_title">Sobre</string>
     <string name="about_subtitle">Informações, atualizações e termos legais</string>
     <string name="about_made_with_love">Feito com ❤️ por Tapframe e amigos</string>
+    <string name="about_fork_credit">Rastreamento e otimizações adaptados com créditos a ysosrs123.</string>
+    <string name="about_fork_source_title">Fork Android de ysosrs123</string>
+    <string name="about_fork_source_subtitle">Veja o código original e suas contribuições GPL-3.0</string>
+    <string name="about_webos_fork_credit">Adaptação deste fork para webOS por Pedro Alencar.</string>
     <string name="about_version">Versão %1$s</string>
     <string name="about_check_updates">Verificar atualizações</string>
     <string name="about_check_updates_subtitle">Baixar a versão mais recente</string>
@@ -707,6 +711,7 @@
     <string name="autoplay_mode_manual">Manual (escolher fonte)</string>
     <string name="autoplay_mode_first">Reproduzir automaticamente a primeira fonte</string>
     <string name="autoplay_mode_regex">Reprodução automática por palavra-chave (Regex)</string>
+    <string name="autoplay_mode_smart">Seleção inteligente</string>
     <string name="autoplay_stream_selection">Seleção automática de fonte</string>
     <string name="autoplay_next_episode">Autorreproduzir próximo episódio</string>
     <string name="autoplay_next_episode_sub">Iniciar o próximo episódio automaticamente após o aviso..</string>
@@ -739,6 +744,15 @@
     <string name="autoplay_mode_manual_desc">Escolha sempre a fonte na lista exibida.</string>
     <string name="autoplay_mode_first_desc">Reproduza a primeira fonte disponível.</string>
     <string name="autoplay_mode_regex_desc">Reproduza fonte que coincidir com as palavras-chave (Regex).</string>
+    <string name="autoplay_mode_smart_desc">Priorize fontes reproduzíveis por PT-BR, qualidade, prontidão e compatibilidade com webOS.</string>
+    <string name="stream_smart_selection_reason">Score %1$d · %2$s</string>
+    <string name="player_stats_for_nerds">Estatísticas avançadas</string>
+    <string name="player_stats_engine">Mecanismo</string>
+    <string name="player_stats_resolution">Resolução</string>
+    <string name="player_stats_format">Formato</string>
+    <string name="player_stats_buffer">Buffer</string>
+    <string name="player_stats_frames">Quadros</string>
+    <string name="player_stats_speed">Velocidade</string>
     <string name="autoplay_scope_all_desc">Use tanto addons quanto plugins.</string>
     <string name="autoplay_scope_addons_desc">Considere apenas fontes de addons instalados.</string>
     <string name="autoplay_scope_plugins_desc">Considere apenas fontes de plugins ativos.</string>
@@ -863,6 +877,8 @@
     <string name="mdblist_enable_subtitle">Exiba notas externas na tela de detalhes.</string>
     <string name="mdblist_api_key_title">Chave API</string>
     <string name="mdblist_api_key_subtitle">Insira a chave necessária para as avaliações.</string>
+    <string name="mdblist_tracking_title">Rastreamento de reprodução</string>
+    <string name="mdblist_tracking_subtitle">Envie o progresso ao MDBList junto com os outros rastreadores conectados</string>
     <string name="mdblist_trakt_title">Trakt</string>
     <string name="mdblist_trakt_subtitle">Exiba as avaliações do Trakt.</string>
     <string name="mdblist_imdb_title">IMDb</string>

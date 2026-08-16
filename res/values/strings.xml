@@ -309,6 +309,10 @@
     <string name="about_title">About</string>
     <string name="about_subtitle">App information, updates, and legal links</string>
     <string name="about_made_with_love">Made with ❤️ by Tapframe and friends</string>
+    <string name="about_fork_credit">Playback tracking and optimisation work adapted with credit to ysosrs123.</string>
+    <string name="about_fork_source_title">ysosrs123 Android fork</string>
+    <string name="about_fork_source_subtitle">View the original NuvioTV-Fork source and its GPL-3.0 contributions</string>
+    <string name="about_webos_fork_credit">Adapted into this webOS fork by Pedro Alencar.</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_check_updates">Check for updates</string>
     <string name="about_check_updates_subtitle">Download latest release</string>
@@ -715,6 +719,7 @@
     <string name="autoplay_mode_manual">Manual (choose stream)</string>
     <string name="autoplay_mode_first">Auto-play first source</string>
     <string name="autoplay_mode_regex">Auto-play regex match</string>
+    <string name="autoplay_mode_smart">Smart selection</string>
     <string name="autoplay_stream_selection">Auto Stream Selection</string>
     <string name="autoplay_next_episode">Auto-play Next Episode</string>
     <string name="autoplay_next_episode_sub">Start next episode automatically when prompt appears.</string>
@@ -747,6 +752,15 @@
     <string name="autoplay_mode_manual_desc">Always show source list and let me choose.</string>
     <string name="autoplay_mode_first_desc">Play the first available source automatically.</string>
     <string name="autoplay_mode_regex_desc">Play first source whose text matches your regex pattern.</string>
+    <string name="autoplay_mode_smart_desc">Rank playable sources by Brazilian Portuguese, quality, readiness, and webOS compatibility.</string>
+    <string name="stream_smart_selection_reason">Score %1$d · %2$s</string>
+    <string name="player_stats_for_nerds">Stats for Nerds</string>
+    <string name="player_stats_engine">Engine</string>
+    <string name="player_stats_resolution">Resolution</string>
+    <string name="player_stats_format">Format</string>
+    <string name="player_stats_buffer">Buffer</string>
+    <string name="player_stats_frames">Frames</string>
+    <string name="player_stats_speed">Speed</string>
     <string name="autoplay_scope_all_desc">Auto-play can use both installed addons and enabled plugins.</string>
     <string name="autoplay_scope_addons_desc">Auto-play only considers streams coming from your installed addons.</string>
     <string name="autoplay_scope_plugins_desc">Auto-play only considers streams coming from enabled plugins.</string>
@@ -873,6 +887,8 @@
     <string name="mdblist_enable_subtitle">Fetch ratings from external providers in metadata detail screen</string>
     <string name="mdblist_api_key_title">API Key</string>
     <string name="mdblist_api_key_subtitle">Required to fetch ratings from MDBList</string>
+    <string name="mdblist_tracking_title">Playback Tracking</string>
+    <string name="mdblist_tracking_subtitle">Send playback progress to MDBList alongside your other connected trackers</string>
     <string name="mdblist_trakt_title">Trakt</string>
     <string name="mdblist_trakt_subtitle">Show Trakt score</string>
     <string name="mdblist_imdb_title">IMDb</string>

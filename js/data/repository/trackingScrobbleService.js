@@ -1,7 +1,8 @@
 import { TraktScrobbleService } from "./traktScrobbleService.js";
 import { SimklScrobbleService } from "./simklScrobbleService.js";
+import { MdbListScrobbleService } from "./mdbListScrobbleService.js";
 
-const providers = [TraktScrobbleService, SimklScrobbleService];
+const providers = [TraktScrobbleService, SimklScrobbleService, MdbListScrobbleService];
 
 function enabledProviders() {
   return providers.filter((provider) => provider.isEnabled());

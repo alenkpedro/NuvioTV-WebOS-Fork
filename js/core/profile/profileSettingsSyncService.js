@@ -1582,7 +1582,8 @@ const FEATURE_ADAPTERS = {
         mdblist_show_tomatoes: settings.showTomatoes !== false,
         mdblist_show_audience: settings.showAudience !== false,
         mdblist_show_metacritic: settings.showMetacritic !== false,
-        mdblist_show_mal: settings.showMal !== false
+        mdblist_show_mal: settings.showMal !== false,
+        mdblist_tracking_enabled: Boolean(settings.trackingEnabled)
       };
     },
     project(rawFeature = {}) {
@@ -1602,7 +1603,8 @@ const FEATURE_ADAPTERS = {
         "mdblist_show_tomatoes",
         "mdblist_show_audience",
         "mdblist_show_metacritic",
-        "mdblist_show_mal"
+        "mdblist_show_mal",
+        "mdblist_tracking_enabled"
       ].forEach((key) => {
         if (booleanOrNull(raw[key]) != null) {
           projected[key] = Boolean(raw[key]);
@@ -1642,6 +1644,9 @@ const FEATURE_ADAPTERS = {
       }
       if (booleanOrNull(raw.mdblist_show_mal) != null) {
         partial.showMal = Boolean(raw.mdblist_show_mal);
+      }
+      if (booleanOrNull(raw.mdblist_tracking_enabled) != null) {
+        partial.trackingEnabled = Boolean(raw.mdblist_tracking_enabled);
       }
       if (!Object.keys(partial).length) {
         return false;

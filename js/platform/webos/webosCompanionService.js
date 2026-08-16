@@ -1,6 +1,6 @@
 import { WebOsLunaService } from "./webosLunaService.js";
 
-const WEBOS_COMPANION_SERVICE_ID = "space.nuvio.webos.service";
+const WEBOS_COMPANION_SERVICE_ID = "com.nuvio.tv.test.service";
 
 export function isWebOsCompanionServiceAvailable() {
   return WebOsLunaService.isAvailable();

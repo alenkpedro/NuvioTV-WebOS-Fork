@@ -1,5 +1,5 @@
 {
-  "name": "space.nuvio.webos.service",
+  "name": "com.nuvio.tv.test.service",
   "private": true,
   "main": "src/index.js"
 }

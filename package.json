@@ -1,5 +1,6 @@
 {
-  "name": "nuvio-tv-web",
+  "name": "nuvio-tv-webos-fork",
+  "author": "Pedro Alencar",
   "private": true,
   "type": "module",
   "version": "0.3.35",

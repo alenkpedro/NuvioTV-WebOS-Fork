@@ -11759,6 +11759,58 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   min-height: 1.2em;
 }
 
+.player-stats-for-nerds {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 34;
+  width: min(440px, calc(100vw - 48px));
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.82);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+  color: #fff;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.player-stats-for-nerds.hidden {
+  display: none;
+}
+
+.player-stats-title {
+  margin-bottom: 8px;
+  color: var(--secondary-color);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.player-stats-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 3px 0;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.player-stats-row span {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.player-stats-row strong {
+  max-width: 68%;
+  overflow: hidden;
+  color: #fff;
+  font-weight: 600;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .player-loading-spinner-ring {
   position: absolute;
   top: 50%;
@@ -17207,6 +17259,14 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.stream-route-autoplay-reason {
+  max-width: 760px;
+  margin: -2px auto 12px;
+  color: var(--text-secondary);
+  font-size: 17px;
+  line-height: 1.35;
 }
 
 .stream-route-autoplay-count {

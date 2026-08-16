@@ -12,7 +12,8 @@ const DEFAULTS = {
   showTomatoes: true,
   showAudience: true,
   showMetacritic: true,
-  showMal: true
+  showMal: true,
+  trackingEnabled: false
 };
 
 function normalizeMdbListSettings(value = {}) {
@@ -28,7 +29,8 @@ function normalizeMdbListSettings(value = {}) {
     showTomatoes: value?.showTomatoes !== false,
     showAudience: value?.showAudience !== false,
     showMetacritic: value?.showMetacritic !== false,
-    showMal: value?.showMal !== false
+    showMal: value?.showMal !== false,
+    trackingEnabled: Boolean(value?.trackingEnabled)
   };
 }
 

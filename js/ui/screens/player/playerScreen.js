@@ -2525,6 +2525,7 @@ export const PlayerScreen = {
     this.bufferingSpinnerTimer = null;
     this.bufferingSpinnerBaselineSeconds = null;
     this.moreActionsVisible = false;
+    this.statsForNerdsVisible = false;
     this.controlFocusZone = "buttons";
     this.stickyProgressFocus = false;
     this.autoHideControlsAfterSeek = false;
@@ -5060,6 +5061,8 @@ export const PlayerScreen = {
           <div class="player-torrent-overlay-detail"></div>
         </div>
 
+        <div id="playerStatsForNerds" class="player-stats-for-nerds hidden" aria-hidden="true"></div>
+
         <div id="playerParentalGuide" class="player-parental-guide hidden"></div>
         <div id="playerSkipIntro" class="player-skip-intro hidden"></div>
 
@@ -5153,6 +5156,7 @@ export const PlayerScreen = {
           torrentOverlayDetail: uiRoot.querySelector(
             "#playerTorrentOverlay .player-torrent-overlay-detail"
           ),
+          statsForNerds: uiRoot.querySelector("#playerStatsForNerds"),
           loadingIdentity: uiRoot.querySelector(".player-loading-identity"),
           loadingLogoStack: uiRoot.querySelector(".player-loading-logo-stack"),
           loadingLogoBase: uiRoot.querySelector(".player-loading-logo-base"),
@@ -9012,6 +9016,11 @@ export const PlayerScreen = {
         icon: "assets/icons/ic_player_aspect_ratio.svg",
         title: t("player_more_aspect_ratio", {}, "Aspect Ratio")
       },
+      {
+        action: "statsForNerds",
+        label: this.statsForNerdsVisible ? "i✓" : "i",
+        title: t("player_stats_for_nerds", {}, "Stats for Nerds")
+      },
       { action: "backFromMore", label: "<", title: t("player_go_back", {}, "Back") }
     ];
   },
@@ -9725,6 +9734,75 @@ export const PlayerScreen = {
     return PLAYER_SPEEDS;
   },
 
+  getStatsForNerdsRows() {
+    const video = PlayerController.video || null;
+    const candidate = this.getCurrentStreamCandidate?.() || {};
+    const presentation = candidate.streamPresentation || candidate.raw?.streamPresentation || {};
+    const quality = video?.getVideoPlaybackQuality?.() || null;
+    const decodedFrames = Number(
+      quality?.totalVideoFrames ?? video?.webkitDecodedFrameCount ?? video?.mozDecodedFrames ?? 0
+    );
+    const droppedFrames = Number(
+      quality?.droppedVideoFrames ?? video?.webkitDroppedFrameCount ?? video?.mozDroppedFrames ?? 0
+    );
+    const current = this.getPlaybackCurrentSeconds();
+    const buffered = this.getPlaybackBufferedSeconds();
+    const bufferAhead = Number.isFinite(buffered) ? Math.max(0, buffered - current) : null;
+    const resolution =
+      Number(video?.videoWidth) > 0 && Number(video?.videoHeight) > 0
+        ? `${video.videoWidth} × ${video.videoHeight}`
+        : presentation.resolution || "—";
+    const technical = [
+      presentation.encode,
+      candidate.mimeType || candidate.raw?.mimeType,
+      ...(Array.isArray(presentation.visualTags) ? presentation.visualTags.slice(0, 2) : []),
+      ...(Array.isArray(presentation.audioTags) ? presentation.audioTags.slice(0, 2) : [])
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    const p2p = [this.torrentOverlayData?.speedText, this.torrentOverlayData?.detailText]
+      .filter(Boolean)
+      .join(" · ");
+    return [
+      [t("player_stats_engine", {}, "Engine"), PlayerController.playbackEngine || "HTML5"],
+      [t("player_stats_resolution", {}, "Resolution"), resolution],
+      [t("player_stats_format", {}, "Format"), technical || "—"],
+      [
+        t("player_stats_buffer", {}, "Buffer"),
+        bufferAhead == null ? "—" : `${bufferAhead.toFixed(1)} s`
+      ],
+      [
+        t("player_stats_frames", {}, "Frames"),
+        decodedFrames > 0 ? `${Math.max(0, droppedFrames)} / ${decodedFrames} dropped` : "—"
+      ],
+      [t("player_stats_speed", {}, "Speed"), `${this.getPlaybackSpeed()}×`],
+      ...(p2p ? [["P2P", p2p]] : [])
+    ];
+  },
+
+  syncStatsForNerds() {
+    const overlay = this.uiRefs?.statsForNerds;
+    if (!overlay) {
+      return;
+    }
+    overlay.classList.toggle("hidden", !this.statsForNerdsVisible);
+    overlay.setAttribute("aria-hidden", this.statsForNerdsVisible ? "false" : "true");
+    if (!this.statsForNerdsVisible) {
+      return;
+    }
+    overlay.innerHTML = `
+      <div class="player-stats-title">${escapeHtml(t("player_stats_for_nerds", {}, "Stats for Nerds"))}</div>
+      ${this.getStatsForNerdsRows()
+        .map(
+          ([label, value]) => `
+            <div class="player-stats-row">
+              <span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>
+            </div>`
+        )
+        .join("")}
+    `;
+  },
+
   hasKnownPlaybackDuration() {
     const durationSeconds = Number(this.getPlaybackDurationSeconds() || 0);
     return Number.isFinite(durationSeconds) && durationSeconds > 0;
@@ -10128,6 +10206,7 @@ export const PlayerScreen = {
 
     this.syncPauseOverlayState();
     this.renderNextEpisodeCard();
+    this.syncStatsForNerds();
 
     if (this.seekOverlayVisible && this.seekPreviewSeconds == null) {
       this.renderSeekOverlay();
@@ -18379,6 +18458,13 @@ export const PlayerScreen = {
       this.cycleAspectMode();
       return;
     }
+
+    if (action === "statsForNerds") {
+      this.statsForNerdsVisible = !this.statsForNerdsVisible;
+      this.syncStatsForNerds();
+      this.renderControlButtons();
+      return;
+    }
   },
 
   syncPointerFocus(target) {
@@ -18704,6 +18790,7 @@ export const PlayerScreen = {
       this.speedDialogVisible ||
       this.episodePanelVisible ||
       this.moreActionsVisible ||
+      this.statsForNerdsVisible ||
       this.pauseOverlayVisible ||
       this.pauseOverlayTimer
     );
@@ -18715,6 +18802,13 @@ export const PlayerScreen = {
         return true;
       }
       Router.back();
+      return true;
+    }
+
+    if (this.statsForNerdsVisible) {
+      this.statsForNerdsVisible = false;
+      this.syncStatsForNerds();
+      this.renderControlButtons();
       return true;
     }
 

@@ -14,10 +14,10 @@ const distDir = path.join(rootDir, "dist");
 const cacheDir = path.join(rootDir, ".cache");
 const stagingDir = path.join(cacheDir, "webos-package");
 const appStageDir = path.join(stagingDir, "app");
-const serviceStageDir = path.join(stagingDir, "space.nuvio.webos.service");
+const serviceStageDir = path.join(stagingDir, "com.nuvio.tv.test.service");
 
-const appName = "Nuvio TV";
-const webOsServiceId = "space.nuvio.webos.service";
+const appName = "Nuvio-test";
+const webOsServiceId = "com.nuvio.tv.test.service";
 const webOsServiceSourceDir = path.join(rootDir, "services", "webos");
 const webOsRuntimeScriptPath = "assets/libs/webOSTV.js";
 
@@ -165,7 +165,7 @@ async function packageWebOs() {
     await runWebOsToolsBinary("ares-package", [appStageDir, serviceStageDir, "--outdir", rootDir]);
   } catch (error) {
     const { version } = await readAppMetadata();
-    const expectedIpk = path.join(rootDir, `space.nuvio.webos_${version}_all.ipk`);
+    const expectedIpk = path.join(rootDir, `com.nuvio.tv.test_${version}_all.ipk`);
     if (await pathExists(expectedIpk)) {
       console.warn(
         `ares-package exited with an error, but ${expectedIpk} was created successfully. Continuing.`

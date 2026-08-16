@@ -1426,7 +1426,11 @@ export const StreamScreen = {
     }
     this.autoPlayAttempted = true;
     this.cancelAutoPlaySelectionWait();
-    void this.playStream(selected.id);
+    if (autoPlayMode === "SMART") {
+      this.startAutoPlayCountdown(selected, 2);
+    } else {
+      void this.playStream(selected.id);
+    }
   },
 
   cancelAutoPlaySelectionWait() {
@@ -1452,6 +1456,8 @@ export const StreamScreen = {
     this.autoPlayCountdown = {
       streamId: stream.id,
       label: getStreamHeadline(stream) || stream.addonName || "stream",
+      explanation: stream.smartSelection?.reasons?.join(" · ") || "",
+      score: Number.isFinite(stream.smartSelection?.score) ? stream.smartSelection.score : null,
       secondsLeft: total
     };
     this.requestRender({ delayMs: 0 });
@@ -1485,12 +1491,19 @@ export const StreamScreen = {
     if (!this.autoPlayCountdown) {
       return "";
     }
-    const { label, secondsLeft } = this.autoPlayCountdown;
+    const { label, explanation, score, secondsLeft } = this.autoPlayCountdown;
     return `
       <div class="stream-route-autoplay">
         <div class="stream-route-autoplay-card">
           <div class="stream-route-autoplay-title">${escapeHtml(t("stream_autoplay_title", {}, "Auto-playing"))}</div>
           <div class="stream-route-autoplay-name">${escapeHtml(label)}</div>
+          ${
+            explanation
+              ? `<div class="stream-route-autoplay-reason">${escapeHtml(
+                  t("stream_smart_selection_reason", [score, explanation], `Score ${score} · ${explanation}`)
+                )}</div>`
+              : ""
+          }
           <div class="stream-route-autoplay-count">${escapeHtml(t("stream_autoplay_countdown", [secondsLeft], `Starting in ${secondsLeft}s`))}</div>
           <div class="stream-route-autoplay-hint">${escapeHtml(t("stream_autoplay_hint", {}, "Press OK to play now, or any key to choose manually"))}</div>
         </div>
