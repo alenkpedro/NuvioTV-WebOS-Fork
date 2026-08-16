@@ -148,6 +148,8 @@ function applyPerformanceMode() {
     !rootClasses.contains("no-backdrop-filter") && ((!constrained && !legacyTizen) || modernWebOs);
   document.documentElement.classList.toggle("performance-constrained", constrained);
   document.body.classList.toggle("performance-constrained", constrained);
+  document.documentElement.classList.toggle("webos-fast-navigation", Platform.isWebOS());
+  document.body.classList.toggle("webos-fast-navigation", Platform.isWebOS());
   document.documentElement.classList.toggle(
     "modern-sidebar-blur-capable",
     modernSidebarBlurCapable

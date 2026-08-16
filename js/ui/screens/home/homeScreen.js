@@ -3805,6 +3805,11 @@ export const HomeScreen = {
   },
 
   getHeroFocusDelay({ rapid = false } = {}) {
+    if (Platform.isWebOS()) {
+      // Let D-pad navigation settle before decoding another full-screen
+      // backdrop. Focus still moves immediately; only the hero refresh waits.
+      return rapid ? 650 : 360;
+    }
     if (this.isLegacyTvRuntime()) {
       return rapid ? 260 : 150;
     }
@@ -5472,7 +5477,9 @@ export const HomeScreen = {
         ?.querySelector(".home-modern-hero-card")
         ?.classList.add("is-hero-focus-pending");
     }
-    const preloadDelay = Math.max(0, Math.min(120, delay - 80));
+    const preloadDelay = Platform.isWebOS()
+      ? Math.max(280, delay - 60)
+      : Math.max(0, Math.min(120, delay - 80));
     this.heroBackdropPreloadTimer = setTimeout(() => {
       this.heroBackdropPreloadTimer = null;
       if (Number(this.heroFocusToken || 0) !== focusToken) {
@@ -5743,6 +5750,10 @@ export const HomeScreen = {
   hydrateCollectionFocusGif(node, active = false) {
     const gifNode = node?.querySelector?.(".home-poster-focus-gif") || null;
     if (!(gifNode instanceof HTMLImageElement)) {
+      return;
+    }
+    if (Platform.isWebOS()) {
+      node?.classList?.remove("is-focus-gif-active");
       return;
     }
     if (active) {
@@ -7924,6 +7935,12 @@ export const HomeScreen = {
     }
     if (!this.boundHomeMouseOverHandler) {
       this.boundHomeMouseOverHandler = (event) => {
+        // Magic Remote pointer movement can emit a stream of mouseover events
+        // while the user is navigating with the D-pad. Click remains fully
+        // supported, but passive hover must not decode heroes or transfer focus.
+        if (Platform.isWebOS()) {
+          return;
+        }
         const target = event?.target?.closest?.(".home-main .home-content-card.focusable");
         if (!target || !this.container?.contains(target) || target.classList.contains("focused")) {
           return;

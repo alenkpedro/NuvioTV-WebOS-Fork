@@ -17756,6 +17756,47 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   overflow: hidden;
 }
 
+/* LG browsers share GPU and system memory with video decoding. Keep D-pad and
+   route changes synchronous; visual transitions on large poster/backdrop layers
+   otherwise queue several frames behind each key press. */
+.webos-fast-navigation .nuvio-route-slide-enter,
+.webos-fast-navigation .home-route-content-enter,
+.webos-fast-navigation .addons-route-enter,
+.webos-fast-navigation .search-route-enter,
+.webos-fast-navigation .library-route-enter,
+.webos-fast-navigation .settings-route-enter,
+.webos-fast-navigation .settings-slide-panel,
+.webos-fast-navigation .home-row-enter,
+.webos-fast-navigation .home-content-card,
+.webos-fast-navigation .home-poster-card,
+.webos-fast-navigation .home-poster-frame,
+.webos-fast-navigation .home-continue-card,
+.webos-fast-navigation .home-hero-backdrop,
+.webos-fast-navigation .home-hero-logo,
+.webos-fast-navigation .modern-sidebar-panel,
+.webos-fast-navigation .series-detail-backdrop,
+.webos-fast-navigation .series-detail-vignette,
+.webos-fast-navigation .series-detail-content,
+.webos-fast-navigation .series-detail-logo,
+.webos-fast-navigation .series-detail-title,
+.webos-fast-navigation .detail-hero-body,
+.webos-fast-navigation .stream-route-card {
+  animation: none !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+
+.webos-fast-navigation .home-poster-focus-gif {
+  display: none !important;
+}
+
+.webos-fast-navigation .home-screen-shell .home-content-card.focused,
+.webos-fast-navigation .home-screen-shell .home-poster-card.focused .home-poster-frame,
+.webos-fast-navigation .stream-route-card.focused {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 .legacy-webos .home-screen-shell.home-layout-modern .home-hero,
 .legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-card {
   top: 0;

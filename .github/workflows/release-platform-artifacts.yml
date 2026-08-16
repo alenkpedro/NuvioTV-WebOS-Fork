@@ -1,8 +1,9 @@
 name: Release TV Artifacts
 
 on:
-  release:
-    types: [published]
+  # This fork publishes its independent webOS package and Homebrew metadata
+  # together. Keep the upstream multi-platform job manual so a webOS release
+  # does not create unrelated Tizen/desktop artifacts.
   workflow_dispatch:
     inputs:
       tag:
