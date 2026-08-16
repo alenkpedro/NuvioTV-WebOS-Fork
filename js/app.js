@@ -42,6 +42,7 @@ LocalStore.remove("rotatedDpadMapping");
 })();
 
 const GUEST_QR_BYPASS_KEY = "skipAuthQrGate";
+const QR_AUTH_RESTORED_MIGRATION_KEY = "qrAuthRestoredV036";
 const SIGNED_OUT_ALLOWED_ROUTES = new Set(["trakt"]);
 let hasSelectedProfileThisSession = false;
 let appShellRendered = false;
@@ -445,6 +446,15 @@ async function bootstrapApp() {
   void checkForAppUpdateOnStartup();
 
   markBootStage("Restoring session");
+  // Version 0.3.35 was packaged without the official public auth runtime
+  // configuration. If the user continued as guest there, webOS preserves the
+  // bypass flag across an update and would keep hiding the restored QR flow.
+  // Clear it once so signed-out installs get one opportunity to link their
+  // existing Nuvio account after upgrading to the connected build.
+  if (!LocalStore.get(QR_AUTH_RESTORED_MIGRATION_KEY, false)) {
+    LocalStore.remove(GUEST_QR_BYPASS_KEY);
+    LocalStore.set(QR_AUTH_RESTORED_MIGRATION_KEY, true);
+  }
   DeviceSessionRegistration.start();
   AuthManager.subscribe((state) => {
     if (state === AuthState.LOADING) {

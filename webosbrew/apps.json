@@ -21,9 +21,9 @@
         "rootRequired": false,
         "ipkUrl": "https://github.com/alenkpedro/NuvioTV-WebOS-Fork/releases/download/v0.3.36-webos-fork.1/com.nuvio.tv.test_0.3.36_all.ipk",
         "ipkHash": {
-          "sha256": "a06f83666c9274fd09773145ffeca18ab9ee4b58b9e370f3bba873c691ecc9c2"
+          "sha256": "177efc334d7a343e8147e944c077c7685fe87840bc78e7b7fc4b659f5b4e687c"
         },
-        "ipkSize": 7430514
+        "ipkSize": 7430526
       },
       "pool": "main",
       "shortDescription": "Nuvio fork independente para LG webOS, adaptado por Pedro Alencar."
