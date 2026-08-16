@@ -3,7 +3,7 @@
   "author": "Pedro Alencar",
   "private": true,
   "type": "module",
-  "version": "0.3.39",
+  "version": "0.3.40",
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepare": "husky || true",

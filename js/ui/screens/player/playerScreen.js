@@ -18404,15 +18404,53 @@ export const PlayerScreen = {
     this.autoHideControlsAfterSeek = false;
     if (this.controlFocusZone === "progress") {
       this.controlFocusZone = "buttons";
-      this.controlFocusIndex = delta < 0 ? 0 : 0;
+      this.controlFocusIndex = Math.max(
+        0,
+        controls.findIndex((control) => control.group === "primary")
+      );
       this.syncControlFocusDom();
       return;
     }
-    const nextIndex = clamp(this.controlFocusIndex + delta, 0, controls.length - 1);
+    const focusedControl = controls[this.controlFocusIndex] || controls[0];
+    const focusedGroup = focusedControl?.group === "primary" ? "primary" : "utility";
+    const groupIndices = controls
+      .map((control, index) => ({ control, index }))
+      .filter(({ control }) =>
+        focusedGroup === "primary" ? control.group === "primary" : control.group !== "primary"
+      )
+      .map(({ index }) => index);
+    const groupPosition = Math.max(0, groupIndices.indexOf(this.controlFocusIndex));
+    const nextPosition = clamp(groupPosition + delta, 0, Math.max(0, groupIndices.length - 1));
+    const nextIndex = groupIndices[nextPosition] ?? this.controlFocusIndex;
     this.controlFocusZone = "buttons";
     this.controlFocusIndex = nextIndex;
     this.syncControlFocusDom();
     this.resetControlsAutoHide();
+  },
+
+  focusControlGroup(group) {
+    const controls = this.getControlDefinitions();
+    const targetIndex = controls.findIndex((control) =>
+      group === "primary" ? control.group === "primary" : control.group !== "primary"
+    );
+    if (targetIndex < 0) {
+      return false;
+    }
+    this.stickyProgressFocus = false;
+    this.autoHideControlsAfterSeek = false;
+    this.controlFocusZone = "buttons";
+    this.controlFocusIndex = targetIndex;
+    this.syncControlFocusDom();
+    this.resetControlsAutoHide();
+    return true;
+  },
+
+  getFocusedControlGroup() {
+    if (this.controlFocusZone !== "buttons") {
+      return "";
+    }
+    const control = this.getControlDefinitions()[this.controlFocusIndex] || null;
+    return control?.group === "primary" ? "primary" : control ? "utility" : "";
   },
 
   performFocusedControl() {
@@ -19204,6 +19242,9 @@ export const PlayerScreen = {
       if (keyCode === 38) {
         this.stickyProgressFocus = false;
         this.autoHideControlsAfterSeek = false;
+        if (this.focusControlGroup("utility")) {
+          return;
+        }
         if (this.focusSkipIntroButton()) {
           return;
         }
@@ -19213,8 +19254,7 @@ export const PlayerScreen = {
       if (keyCode === 40) {
         this.stickyProgressFocus = false;
         this.autoHideControlsAfterSeek = false;
-        this.controlFocusZone = "buttons";
-        this.syncControlFocusDom();
+        this.focusControlGroup("primary");
         return;
       }
       if (isSelectKeyCode(keyCode)) {
@@ -19235,11 +19275,21 @@ export const PlayerScreen = {
       return;
     }
     if (keyCode === 38) {
-      this.focusProgressBar();
+      if (this.getFocusedControlGroup() === "utility") {
+        if (!this.focusSkipIntroButton()) {
+          this.resetControlsAutoHide();
+        }
+      } else {
+        this.focusProgressBar();
+      }
       return;
     }
     if (keyCode === 40) {
-      this.setControlsVisible(false);
+      if (this.getFocusedControlGroup() === "utility") {
+        this.focusProgressBar();
+      } else {
+        this.setControlsVisible(false);
+      }
       return;
     }
     if (isSelectKeyCode(keyCode)) {
