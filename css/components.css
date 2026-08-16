@@ -21906,3 +21906,133 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
 .licenses-list section { margin-bottom: 2rem; }
 .licenses-list h2 { font-size: .95rem; letter-spacing: .12em; color: var(--color-text-secondary, #aaa); }
 .license-row { display: block; width: 100%; margin: .65rem 0; }
+
+/* Visual parity with ysosrs123/NuvioTV-Fork. The TV canvas uses the same
+   x2 conversion already used by the Android-derived component tokens. */
+.player-controls-overlay {
+  padding: min(2.5vw, 48px) min(3.33vw, 64px) min(5vw, 96px);
+}
+
+.player-controls-bottom {
+  gap: 0;
+}
+
+.player-meta-actions-row {
+  display: flex;
+  width: 100%;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: min(2.5vw, 48px);
+}
+
+.player-meta-actions-row .player-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: min(60vw, 1160px);
+}
+
+.player-utility-buttons {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  align-self: flex-end;
+  direction: ltr;
+}
+
+.player-progress-shell {
+  box-sizing: border-box;
+  height: min(2.08vw, 40px);
+  margin-top: min(0.42vw, 8px);
+  display: flex;
+  align-items: center;
+}
+
+.player-progress-track {
+  height: min(0.3125vw, 6px);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.player-progress-shell.focused .player-progress-track {
+  height: min(0.833vw, 16px);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.player-progress-fill {
+  background: #fff;
+}
+
+.player-time-label {
+  width: 100%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--player-overlay-label-font);
+  line-height: 1.35;
+  direction: ltr;
+}
+
+.player-controls-row {
+  margin-top: min(0.83vw, 16px);
+  justify-content: flex-start;
+}
+
+.player-primary-buttons {
+  gap: min(0.83vw, 16px);
+  direction: ltr;
+}
+
+.player-control-btn.is-pill {
+  width: auto;
+  min-width: var(--player-control-size);
+  padding: 0 min(1.25vw, 24px);
+  gap: min(0.42vw, 8px);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.player-control-btn.is-pill .player-control-icon {
+  width: min(1.875vw, 36px);
+  height: min(1.875vw, 36px);
+}
+
+.player-control-btn.is-pill .player-control-label {
+  color: currentColor;
+  font-size: min(1.46vw, 28px);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.player-control-btn.is-primary:not(.focused) {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.player-control-btn.is-pill.focused,
+.player-control-btn.is-primary.focused {
+  background: #fff;
+  color: #000;
+}
+
+.player-control-btn.is-pill.focused .player-control-icon-mask,
+.player-control-btn.is-primary.focused .player-control-icon-mask {
+  background-color: #000;
+}
+
+/* Modern carousel cards in the Android fork keep their geometry stable and
+   draw a 2dp focus ring. Avoiding animation keeps LG navigation responsive. */
+.webos-fast-navigation .home-screen-shell .home-poster-card.focused .home-poster-frame {
+  border-width: 4px;
+  border-color: var(--focus-color);
+  box-shadow: none !important;
+}
+
+.webos-fast-navigation .home-screen-shell .home-continue-card.focused .home-continue-media {
+  box-shadow: inset 0 0 0 4px var(--focus-color) !important;
+}
+
+.webos-fast-navigation .home-screen-shell .home-seeall-card.focused .home-seeall-card-inner {
+  border-width: 4px;
+  border-color: var(--focus-color);
+  box-shadow: none !important;
+}

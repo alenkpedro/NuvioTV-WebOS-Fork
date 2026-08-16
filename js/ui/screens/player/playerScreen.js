@@ -5099,10 +5099,13 @@ export const PlayerScreen = {
           </div>
 
           <div class="player-controls-bottom">
-            <div class="player-meta">
-              <div class="player-title">${escapeHtml(header.title)}</div>
-              ${header.subtitle ? `<div class="player-subtitle">${escapeHtml(header.subtitle)}</div>` : ""}
-              ${header.meta ? `<div class="player-meta-tertiary">${escapeHtml(header.meta)}</div>` : ""}
+            <div class="player-meta-actions-row">
+              <div class="player-meta">
+                <div class="player-title">${escapeHtml(header.title)}</div>
+                ${header.subtitle ? `<div class="player-subtitle">${escapeHtml(header.subtitle)}</div>` : ""}
+                ${header.meta ? `<div class="player-meta-tertiary">${escapeHtml(header.meta)}</div>` : ""}
+              </div>
+              <div id="playerUtilityButtons" class="player-control-buttons player-utility-buttons"></div>
             </div>
 
             <div class="player-controls-bar">
@@ -5113,9 +5116,13 @@ export const PlayerScreen = {
                 </div>
               </div>
 
+              <div id="playerTimeLabel" class="player-time-label">
+                <span id="playerElapsedTime">0:00</span>
+                <span id="playerRemainingTime">-0:00</span>
+              </div>
+
               <div class="player-controls-row">
-                <div id="playerControlButtons" class="player-control-buttons"></div>
-                <div id="playerTimeLabel" class="player-time-label">0:00 / 0:00</div>
+                <div id="playerControlButtons" class="player-control-buttons player-primary-buttons"></div>
               </div>
             </div>
           </div>
@@ -5190,7 +5197,10 @@ export const PlayerScreen = {
           progressBuffered: uiRoot.querySelector("#playerProgressBuffered"),
           progressFill: uiRoot.querySelector("#playerProgressFill"),
           controlButtons: uiRoot.querySelector("#playerControlButtons"),
+          utilityButtons: uiRoot.querySelector("#playerUtilityButtons"),
           timeLabel: uiRoot.querySelector("#playerTimeLabel"),
+          elapsedTime: uiRoot.querySelector("#playerElapsedTime"),
+          remainingTime: uiRoot.querySelector("#playerRemainingTime"),
           startupErrorButton: uiRoot.querySelector(
             "#playerStartupErrorOverlay .player-startup-error-button"
           )
@@ -8942,26 +8952,58 @@ export const PlayerScreen = {
     const base = [
       {
         action: "playPause",
-        label: this.paused ? ">" : "II",
         icon: this.paused ? "assets/icons/ic_player_play.svg" : "assets/icons/ic_player_pause.svg",
         title: "Play/Pause",
-        primary: true
+        primary: true,
+        group: "primary",
+        pillLabel: this.paused
+          ? t("player_pill_play", {}, "Play")
+          : t("player_pill_pause", {}, "Pause")
+      },
+      {
+        action: "restart",
+        icon: "assets/icons/ic_player_restart.svg",
+        useMask: true,
+        title: t("player_pill_restart", {}, "Restart"),
+        group: "primary",
+        pillLabel: t("player_pill_restart", {}, "Restart")
       }
     ];
+
+    if (Array.isArray(uiState.episodesAll) && uiState.episodesAll.length) {
+      base.push({
+        action: "episodes",
+        icon: "assets/icons/ic_player_episodes.svg",
+        title: t("episodes_panel_title", {}, "Episodes"),
+        group: "primary",
+        pillLabel: t("player_pill_episodes", {}, "Episodes")
+      });
+    }
 
     if (nextEpisode?.hasAired && !this.nextEpisodeLaunching) {
       base.push({
         action: "playNextEpisode",
         icon: "assets/icons/ic_player_skip_next.svg",
         useMask: true,
-        title: t("next_episode_label", {}, "Next episode")
+        title: t("next_episode_label", {}, "Next episode"),
+        group: "primary",
+        pillLabel: t("next_episode_label", {}, "Next episode")
       });
     }
 
     base.push({
+      action: "statsForNerds",
+      icon: "assets/icons/ic_player_info.svg",
+      useMask: true,
+      title: t("player_stats_for_nerds", {}, "Stream information"),
+      group: "utility"
+    });
+
+    base.push({
       action: "subtitleDialog",
       icon: "assets/icons/ic_player_subtitles.svg",
-      title: t("subtitle_dialog_title", {}, "Subtitles")
+      title: t("subtitle_dialog_title", {}, "Subtitles"),
+      group: "utility"
     });
 
     base.push({
@@ -8971,27 +9013,22 @@ export const PlayerScreen = {
           ? "assets/icons/ic_player_audio_filled.svg"
           : "assets/icons/ic_player_audio_outline.svg",
       useMask: true,
-      title: t("audio_dialog_title", {}, "Audio")
+      title: t("audio_dialog_title", {}, "Audio"),
+      group: "utility"
     });
 
     base.push({
       action: "source",
       icon: "assets/icons/ic_player_source.svg",
-      title: t("sources_title", {}, "Sources")
+      title: t("sources_title", {}, "Sources"),
+      group: "utility"
     });
-
-    if (Array.isArray(uiState.episodesAll) && uiState.episodesAll.length) {
-      base.push({
-        action: "episodes",
-        icon: "assets/icons/ic_player_episodes.svg",
-        title: t("episodes_panel_title", {}, "Episodes")
-      });
-    }
 
     base.push({
       action: "more",
       label: this.moreActionsVisible ? "<" : ">",
-      title: t("player_more_actions_title", {}, "More Actions")
+      title: t("player_more_actions_title", {}, "More Actions"),
+      group: "utility"
     });
 
     if (!this.moreActionsVisible) {
@@ -9007,21 +9044,23 @@ export const PlayerScreen = {
             {
               action: "speed",
               label: `${playbackSpeed.toFixed(playbackSpeed % 1 ? 2 : 0)}x`,
-              title: t("player_playback_speed", {}, "Playback speed")
+              title: t("player_playback_speed", {}, "Playback speed"),
+              group: "utility"
             }
           ]
         : []),
       {
         action: "aspect",
         icon: "assets/icons/ic_player_aspect_ratio.svg",
-        title: t("player_more_aspect_ratio", {}, "Aspect Ratio")
+        title: t("player_more_aspect_ratio", {}, "Aspect Ratio"),
+        group: "utility"
       },
       {
-        action: "statsForNerds",
-        label: this.statsForNerdsVisible ? "i✓" : "i",
-        title: t("player_stats_for_nerds", {}, "Stats for Nerds")
-      },
-      { action: "backFromMore", label: "<", title: t("player_go_back", {}, "Back") }
+        action: "backFromMore",
+        label: "<",
+        title: t("player_go_back", {}, "Back"),
+        group: "utility"
+      }
     ];
   },
 
@@ -9033,17 +9072,31 @@ export const PlayerScreen = {
         control.icon || "",
         control.title || "",
         Boolean(control.primary),
-        Boolean(control.useMask)
+        Boolean(control.useMask),
+        control.group || "utility",
+        control.pillLabel || ""
       ])
     );
+  },
+
+  getControlButtonNodes() {
+    return [
+      ...Array.from(
+        this.uiRefs?.controlButtons?.querySelectorAll?.(".player-control-btn") || []
+      ),
+      ...Array.from(
+        this.uiRefs?.utilityButtons?.querySelectorAll?.(".player-control-btn") || []
+      )
+    ];
   },
 
   renderControlButtons() {
     if (this.isExternalFrameMode()) {
       return;
     }
-    const wrap = this.uiRefs?.controlButtons;
-    if (!wrap) {
+    const primaryWrap = this.uiRefs?.controlButtons;
+    const utilityWrap = this.uiRefs?.utilityButtons;
+    if (!primaryWrap || !utilityWrap) {
       return;
     }
 
@@ -9059,26 +9112,32 @@ export const PlayerScreen = {
     }
     this.controlFocusIndex = clamp(this.controlFocusIndex, 0, Math.max(0, controls.length - 1));
 
-    wrap.innerHTML = controls
-      .map(
-        (control) => `
-      <button class="player-control-btn focusable${control.primary ? " is-primary" : ""}"
+    const renderControl = (control) => `
+      <button class="player-control-btn focusable${control.primary ? " is-primary" : ""}${control.pillLabel ? " is-pill" : ""}"
               data-action="${control.action}"
               title="${escapeHtml(control.title || "")}">
         ${
           control.icon
-            ? control.primary || control.useMask
-              ? `<span class="player-control-icon player-control-icon-mask" style="-webkit-mask-image:url('${escapeHtml(control.icon)}');mask-image:url('${escapeHtml(control.icon)}');" aria-hidden="true"></span>`
-              : `<img class="player-control-icon" src="${control.icon}" alt="" aria-hidden="true" />`
+            ? `${
+                control.primary || control.useMask
+                  ? `<span class="player-control-icon player-control-icon-mask" style="-webkit-mask-image:url('${escapeHtml(control.icon)}');mask-image:url('${escapeHtml(control.icon)}');" aria-hidden="true"></span>`
+                  : `<img class="player-control-icon" src="${control.icon}" alt="" aria-hidden="true" />`
+              }${control.pillLabel ? `<span class="player-control-label">${escapeHtml(control.pillLabel)}</span>` : ""}`
             : `<span class="player-control-label">${escapeHtml(control.label || "")}</span>`
         }
       </button>
-    `
-      )
+    `;
+    primaryWrap.innerHTML = controls
+      .filter((control) => control.group === "primary")
+      .map(renderControl)
+      .join("");
+    utilityWrap.innerHTML = controls
+      .filter((control) => control.group !== "primary")
+      .map(renderControl)
       .join("");
     this.renderedControlSignature = controlRenderSignature;
 
-    const buttons = Array.from(wrap.querySelectorAll(".player-control-btn"));
+    const buttons = this.getControlButtonNodes();
     buttons.forEach((button, index) => {
       button.classList.toggle(
         "focused",
@@ -9143,13 +9202,12 @@ export const PlayerScreen = {
     if (this.isExternalFrameMode()) {
       return;
     }
-    const wrap = this.uiRefs?.controlButtons;
-    if (!wrap) {
+    if (!this.uiRefs?.controlButtons || !this.uiRefs?.utilityButtons) {
       return;
     }
 
     const controls = this.getControlDefinitions();
-    const buttons = Array.from(wrap.querySelectorAll(".player-control-btn"));
+    const buttons = this.getControlButtonNodes();
     const controlsMatchDom = buttons.every(
       (button, index) => button.dataset.action === String(controls[index]?.action || "")
     );
@@ -9364,9 +9422,7 @@ export const PlayerScreen = {
       if (!this.controlsVisible || this.controlFocusZone !== "progress") {
         return;
       }
-      const buttons = Array.from(
-        this.uiRefs?.controlButtons?.querySelectorAll?.(".player-control-btn") || []
-      );
+      const buttons = this.getControlButtonNodes();
       buttons.forEach((button) => {
         button.classList.remove("focused");
         if (typeof button.blur === "function") {
@@ -10197,9 +10253,16 @@ export const PlayerScreen = {
 
     const timeLabel = uiRefs.timeLabel;
     if (timeLabel) {
-      const nextTimeLabel = `${formatTime(effectiveProgressSeconds)} / ${formatTime(duration)}`;
+      const elapsedText = formatTime(effectiveProgressSeconds);
+      const remainingText = `-${formatTime(Math.max(0, duration - effectiveProgressSeconds))}`;
+      const nextTimeLabel = `${elapsedText}|${remainingText}`;
       if (uiState.timeLabelText !== nextTimeLabel) {
-        timeLabel.textContent = nextTimeLabel;
+        if (uiRefs.elapsedTime && uiRefs.remainingTime) {
+          uiRefs.elapsedTime.textContent = elapsedText;
+          uiRefs.remainingTime.textContent = remainingText;
+        } else {
+          timeLabel.textContent = `${elapsedText} / ${formatTime(duration)}`;
+        }
         uiState.timeLabelText = nextTimeLabel;
       }
     }
@@ -18373,6 +18436,15 @@ export const PlayerScreen = {
       return;
     }
 
+    if (action === "restart") {
+      this.seekPlaybackSeconds(0);
+      if (this.paused) {
+        this.togglePause();
+      }
+      this.renderControlButtons();
+      return;
+    }
+
     if (action === "playNextEpisode") {
       void this.playNextEpisode({ userInitiated: true });
       return;
@@ -18481,9 +18553,7 @@ export const PlayerScreen = {
 
     const controlButton = target?.closest?.(".player-control-btn[data-action]");
     if (controlButton) {
-      const buttons = Array.from(
-        this.uiRefs?.controlButtons?.querySelectorAll?.(".player-control-btn[data-action]") || []
-      );
+      const buttons = this.getControlButtonNodes();
       const index = buttons.indexOf(controlButton);
       if (index >= 0) {
         this.stickyProgressFocus = false;
