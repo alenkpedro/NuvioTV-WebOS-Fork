@@ -131,13 +131,6 @@ function isLowEndDevice() {
   return lowCpu || lowMem;
 }
 
-function getChromiumMajorVersion() {
-  const userAgent = String(globalThis.navigator?.userAgent || "");
-  const match = userAgent.match(/(?:chrome|chromium)\/(\d{2,3})/i);
-  const version = Number(match?.[1] || 0);
-  return Number.isFinite(version) ? version : 0;
-}
-
 function applyPerformanceMode() {
   const constrained = Platform.isWebOS() || Platform.isTizen() || isLowEndDevice();
   const webOsMajorVersion = Platform.isWebOS() ? Number(Platform.getWebOsMajorVersion() || 0) : 0;
@@ -145,13 +138,14 @@ function applyPerformanceMode() {
   const legacyWebOs38 = Platform.isWebOS() && webOsMajorVersion > 0 && webOsMajorVersion <= 3;
   const legacyTizen = Platform.isTizen();
   const rootClasses = document.documentElement.classList;
-  const modernWebOs = Platform.isWebOS() && getChromiumMajorVersion() >= 120;
   const modernSidebarBlurCapable =
-    !rootClasses.contains("no-backdrop-filter") && ((!constrained && !legacyTizen) || modernWebOs);
+    !rootClasses.contains("no-backdrop-filter") && !constrained && !legacyTizen;
   document.documentElement.classList.toggle("performance-constrained", constrained);
   document.body.classList.toggle("performance-constrained", constrained);
   document.documentElement.classList.toggle("webos-fast-navigation", Platform.isWebOS());
   document.body.classList.toggle("webos-fast-navigation", Platform.isWebOS());
+  document.documentElement.classList.toggle("webos-performance-profile", Platform.isWebOS());
+  document.body.classList.toggle("webos-performance-profile", Platform.isWebOS());
   document.documentElement.classList.toggle(
     "modern-sidebar-blur-capable",
     modernSidebarBlurCapable
@@ -218,6 +212,9 @@ async function enterWithLastProfile({ restoreWebOsRoute = false } = {}) {
     if (LayoutPreferences.applyForkVisualPresetOnce(activeProfile.id)) {
       ThemeStore.setForProfile(activeProfile.id, { fontFamily: "INTER" });
     }
+    if (Platform.isWebOS()) {
+      LayoutPreferences.applyWebOsPerformancePresetOnce(activeProfile.id);
+    }
     StartupSyncService.enableProfileScopedSync();
     detailWatchedEnrichmentService.invalidateAllCache();
     await I18n.init();
@@ -227,9 +224,7 @@ async function enterWithLastProfile({ restoreWebOsRoute = false } = {}) {
       console.warn("Stream badge image prerender failed", error);
     });
   }
-  const experienceRoute = activeProfile
-    ? await resolveExperienceRoute(activeProfile.id)
-    : "home";
+  const experienceRoute = activeProfile ? await resolveExperienceRoute(activeProfile.id) : "home";
   const resumeRoute =
     restoreWebOsRoute && typeof Router.consumeWebOsResumeRoute === "function"
       ? Router.consumeWebOsResumeRoute()
@@ -396,8 +391,7 @@ function setupWebOsAppLifecycle() {
 }
 
 function setupProviderCredentialForegroundLifecycle() {
-  let wasBackgrounded =
-    document.visibilityState === "hidden" || document.webkitHidden === true;
+  let wasBackgrounded = document.visibilityState === "hidden" || document.webkitHidden === true;
   const requestAfterBackground = () => {
     if (!wasBackgrounded) return;
     wasBackgrounded = false;

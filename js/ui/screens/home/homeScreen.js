@@ -469,7 +469,7 @@ function preloadModernHeroAssets(hero) {
   return Promise.all([preloadImageSource(display?.backdrop), preloadImageSource(display?.logo)]);
 }
 
-function animateModernHeroBackdropSwap(backdrop, nextSrc, nextAlt = "") {
+function animateModernHeroBackdropSwap(backdrop, nextSrc, nextAlt = "", { instant = false } = {}) {
   if (!(backdrop instanceof HTMLImageElement)) {
     return;
   }
@@ -503,6 +503,15 @@ function animateModernHeroBackdropSwap(backdrop, nextSrc, nextAlt = "") {
   }
 
   if (currentSrc === normalizedSrc) {
+    backdrop.setAttribute("alt", normalizedAlt);
+    backdrop.classList.remove("placeholder");
+    return;
+  }
+
+  if (instant) {
+    clearGhosts();
+    backdrop.classList.remove("home-hero-backdrop-transition-enter", "is-visible");
+    backdrop.setAttribute("src", normalizedSrc);
     backdrop.setAttribute("alt", normalizedAlt);
     backdrop.classList.remove("placeholder");
     return;
@@ -553,7 +562,7 @@ function animateModernHeroBackdropSwap(backdrop, nextSrc, nextAlt = "") {
   });
 }
 
-function animateModernHeroLogoSwap(logoNode, nextSrc, nextAlt = "") {
+function animateModernHeroLogoSwap(logoNode, nextSrc, nextAlt = "", { instant = false } = {}) {
   if (!(logoNode instanceof HTMLImageElement)) {
     return;
   }
@@ -585,6 +594,14 @@ function animateModernHeroLogoSwap(logoNode, nextSrc, nextAlt = "") {
   }
 
   if (currentSrc === normalizedSrc) {
+    logoNode.setAttribute("alt", normalizedAlt);
+    return;
+  }
+
+  if (instant) {
+    clearGhosts();
+    logoNode.classList.remove("home-hero-logo-transition-enter", "is-visible");
+    logoNode.setAttribute("src", normalizedSrc);
     logoNode.setAttribute("alt", normalizedAlt);
     return;
   }
@@ -3808,7 +3825,7 @@ export const HomeScreen = {
     if (Platform.isWebOS()) {
       // Let D-pad navigation settle before decoding another full-screen
       // backdrop. Focus still moves immediately; only the hero refresh waits.
-      return rapid ? 650 : 360;
+      return rapid ? 850 : 520;
     }
     if (this.isLegacyTvRuntime()) {
       return rapid ? 260 : 150;
@@ -3961,7 +3978,9 @@ export const HomeScreen = {
         const shouldFreezeBackdrop =
           Boolean(hero?.heroMetaEnriching) && String(backdrop.getAttribute("src") || "").trim();
         if (!shouldFreezeBackdrop) {
-          animateModernHeroBackdropSwap(backdrop, src, display.title || "featured");
+          animateModernHeroBackdropSwap(backdrop, src, display.title || "featured", {
+            instant: this.isPerformanceConstrained()
+          });
         } else {
           backdrop.setAttribute("alt", display.title || "featured");
         }
@@ -3979,20 +3998,26 @@ export const HomeScreen = {
     const brandNode = heroNode.querySelector(".home-hero-brand");
     if (display.logo) {
       if (logoNode) {
-        animateModernHeroLogoSwap(logoNode, display.logo, display.title || "logo");
+        animateModernHeroLogoSwap(logoNode, display.logo, display.title || "logo", {
+          instant: this.isPerformanceConstrained()
+        });
       } else if (brandNode) {
+        const instantLogo = this.isPerformanceConstrained();
         brandNode.insertAdjacentHTML(
           "afterbegin",
-          `<img class="home-hero-logo home-hero-logo-transition-enter" src="${escapeAttribute(display.logo)}" alt="${escapeAttribute(display.title || "logo")}" decoding="async" fetchpriority="high" />`
+          `<img class="home-hero-logo${instantLogo ? "" : " home-hero-logo-transition-enter"}" src="${escapeAttribute(display.logo)}" alt="${escapeAttribute(display.title || "logo")}" decoding="async" fetchpriority="high" />`
         );
         const insertedLogo = brandNode.querySelector(".home-hero-logo");
-        requestAnimationFrame(() => {
-          insertedLogo?.classList?.add("is-visible");
-          setTimeout(
-            () => insertedLogo?.classList?.remove("home-hero-logo-transition-enter", "is-visible"),
-            HOME_MODERN_HERO_BACKDROP_CROSSFADE_MS
-          );
-        });
+        if (!instantLogo) {
+          requestAnimationFrame(() => {
+            insertedLogo?.classList?.add("is-visible");
+            setTimeout(
+              () =>
+                insertedLogo?.classList?.remove("home-hero-logo-transition-enter", "is-visible"),
+              HOME_MODERN_HERO_BACKDROP_CROSSFADE_MS
+            );
+          });
+        }
       }
     } else if (logoNode) {
       logoNode.remove();
@@ -4481,9 +4506,7 @@ export const HomeScreen = {
 
   restoreContinueWatchingMenuFocus() {
     this.unlockHomeHoldFocus();
-    const rowKey = String(
-      this.pendingContinueWatchingFocusRowKey || "continue_watching"
-    );
+    const rowKey = String(this.pendingContinueWatchingFocusRowKey || "continue_watching");
     const cards = this.getNavigationRowNodes(rowKey);
     const target =
       cards[
@@ -4770,12 +4793,15 @@ export const HomeScreen = {
       normalizedAction === "confirmDestructiveSimklRemoval"
     ) {
       try {
-        await libraryRepository.applyMembershipChanges(this.posterListPicker.item, {
-          desiredMembership: this.posterListPicker.membership || {}
-        }, {
-          destructiveRemovalConfirmed:
-            normalizedAction === "confirmDestructiveSimklRemoval"
-        });
+        await libraryRepository.applyMembershipChanges(
+          this.posterListPicker.item,
+          {
+            desiredMembership: this.posterListPicker.membership || {}
+          },
+          {
+            destructiveRemovalConfirmed: normalizedAction === "confirmDestructiveSimklRemoval"
+          }
+        );
         this.posterListPicker = null;
         this.destroyHomeHoldDialog();
         this.restorePosterHoldMenuFocus();
@@ -5257,9 +5283,7 @@ export const HomeScreen = {
       return false;
     }
     const anchorIndex = Math.max(0, Number(this.continueWatchingMenu?.index || 0));
-    const anchorRowKey = String(
-      this.continueWatchingMenu?.rowKey || "continue_watching"
-    );
+    const anchorRowKey = String(this.continueWatchingMenu?.rowKey || "continue_watching");
     if (option.action === "resume") {
       return this.openContinueWatchingFromItem(item);
     }
@@ -8951,16 +8975,19 @@ export const HomeScreen = {
     const depthClass = this.layoutPrefs?.cardDepthEnabled
       ? ` home-card-depth${this.layoutPrefs.cardDepthPostersEnabled !== false ? " depth-posters" : ""}${this.layoutPrefs.cardDepthContinueWatchingEnabled !== false ? " depth-continue-watching" : ""}`
       : "";
-    const classicGradientClass = this.layoutMode === "classic" && this.layoutPrefs?.classicFocusGradientEnabled
-      ? " home-classic-focus-gradient"
-      : "";
+    const classicGradientClass =
+      this.layoutMode === "classic" && this.layoutPrefs?.classicFocusGradientEnabled
+        ? " home-classic-focus-gradient"
+        : "";
     const layoutClass = `home-layout-${this.layoutMode}${modernLandscapeLayoutClass}${modernHeroFullScreenBackdropClass}${modernSidebarLayoutClass}${depthClass}${classicGradientClass}`;
     const sizingStyle = [
       this.layoutMode === "modern" ? buildModernHomeSizingStyle(this.layoutPrefs) : "",
       `--card-depth-edge:${Number(this.layoutPrefs?.cardDepthEdgeStrength ?? 28) / 100}`,
       `--card-depth-sheen:${Number(this.layoutPrefs?.cardDepthSheenStrength ?? 10) / 100}`,
       `--card-depth-coverage:${Number(this.layoutPrefs?.cardDepthEdgeCoverage ?? 0)}%`
-    ].filter(Boolean).join(";");
+    ]
+      .filter(Boolean)
+      .join(";");
     const showPosterLabels = this.layoutPrefs?.posterLabelsEnabled !== false;
     const showCatalogAddonName = this.layoutPrefs?.catalogAddonNameEnabled !== false;
     const showCatalogTypeSuffix = this.layoutPrefs?.catalogTypeSuffixEnabled !== false;
@@ -9221,9 +9248,7 @@ export const HomeScreen = {
       !backFocusState &&
       Number.isFinite(this.pendingContinueWatchingFocusIndex)
     ) {
-      const pendingRowKey = String(
-        this.pendingContinueWatchingFocusRowKey || "continue_watching"
-      );
+      const pendingRowKey = String(this.pendingContinueWatchingFocusRowKey || "continue_watching");
       const cards = this.getNavigationRowNodes(pendingRowKey);
       const target =
         cards[
@@ -9337,9 +9362,7 @@ export const HomeScreen = {
 
   scheduleHomeLazyImageHydration(anchorNode = null, { refreshIndex = false } = {}) {
     const anchorRow =
-      anchorNode instanceof HTMLElement
-        ? anchorNode.closest(HOME_LAZY_IMAGE_ROW_SELECTOR)
-        : null;
+      anchorNode instanceof HTMLElement ? anchorNode.closest(HOME_LAZY_IMAGE_ROW_SELECTOR) : null;
     if (
       anchorRow instanceof HTMLElement &&
       anchorRow === this.lastHomeLazyImageHydrationAnchorRow &&

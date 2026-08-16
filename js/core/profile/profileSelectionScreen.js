@@ -2112,6 +2112,9 @@ export const ProfileSelectionScreen = {
       if (LayoutPreferences.applyForkVisualPresetOnce(profileId)) {
         ThemeStore.setForProfile(profileId, { fontFamily: "INTER" });
       }
+      if (Platform.isWebOS()) {
+        LayoutPreferences.applyWebOsPerformancePresetOnce(profileId);
+      }
       StartupSyncService.enableProfileScopedSync();
       detailWatchedEnrichmentService.invalidateAllCache();
       await I18n.init();
