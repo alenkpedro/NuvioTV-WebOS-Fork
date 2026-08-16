@@ -5,6 +5,8 @@ import { StartupSyncService } from "../../core/profile/startupSyncService.js";
 import { ScreenUtils } from "../../ui/navigation/screen.js";
 import { AvatarRepository } from "../../data/remote/supabase/avatarRepository.js";
 import { ThemeManager } from "../../ui/theme/themeManager.js";
+import { LayoutPreferences } from "../../data/local/layoutPreferences.js";
+import { ThemeStore } from "../../data/local/themeStore.js";
 import { I18n } from "../../i18n/index.js";
 import { NuvioDialog } from "../../ui/components/nuvioDialog.js";
 import { detailWatchedEnrichmentService } from "../../data/repository/detailWatchedEnrichmentService.js";
@@ -2107,6 +2109,9 @@ export const ProfileSelectionScreen = {
     profileCard?.classList?.add("is-activating");
     try {
       await ProfileManager.setActiveProfile(profileId);
+      if (LayoutPreferences.applyForkVisualPresetOnce(profileId)) {
+        ThemeStore.setForProfile(profileId, { fontFamily: "INTER" });
+      }
       StartupSyncService.enableProfileScopedSync();
       detailWatchedEnrichmentService.invalidateAllCache();
       await I18n.init();

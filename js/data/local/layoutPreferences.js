@@ -2,6 +2,22 @@ import { createProfileScopedStore } from "./profileScopedStore.js";
 import { LocalStore } from "../../core/storage/localStore.js";
 
 const KEY = "layoutPreferences";
+const FORK_VISUAL_PRESET_KEY = "nuvioWebOsForkVisualPresetV1";
+
+const FORK_VISUAL_PRESET = {
+  homeLayout: "modern",
+  continueWatchingCardStyle: "card",
+  heroSectionEnabled: true,
+  posterLabelsEnabled: false,
+  catalogAddonNameEnabled: false,
+  catalogTypeSuffixEnabled: false,
+  modernLandscapePostersEnabled: true,
+  modernHeroFullScreenBackdropEnabled: true,
+  focusedPosterBackdropExpandEnabled: true,
+  modernSidebar: true,
+  modernSidebarBlur: true,
+  cardDepthEnabled: false
+};
 
 const DEFAULTS = {
   hasChosenLayout: false,
@@ -161,6 +177,26 @@ function applyCardDepthPresentation(settings) {
 }
 
 export const LayoutPreferences = {
+  applyForkVisualPresetOnce(profileId = null) {
+    const normalizedProfileId = String(profileId || "default");
+    const migrationKey = `${FORK_VISUAL_PRESET_KEY}:${normalizedProfileId}`;
+    if (LocalStore.get(migrationKey, false)) {
+      return false;
+    }
+    if (profileId !== null && profileId !== undefined && profileId !== "") {
+      store.setForProfile(profileId, FORK_VISUAL_PRESET);
+    } else {
+      store.set(FORK_VISUAL_PRESET);
+    }
+    LocalStore.set(migrationKey, true);
+    applyCardDepthPresentation(
+      profileId !== null && profileId !== undefined && profileId !== ""
+        ? store.getForProfile(profileId)
+        : store.get()
+    );
+    return true;
+  },
+
   getForProfile(profileId) {
     return store.getForProfile(profileId);
   },

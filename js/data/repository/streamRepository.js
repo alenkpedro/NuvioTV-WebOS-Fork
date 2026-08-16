@@ -7,7 +7,69 @@ import { TmdbService } from "../../core/tmdb/tmdbService.js";
 import { LocalDebridAvailabilityService } from "../../core/debrid/localDebridAvailabilityService.js";
 import { DebridStreamPresentation } from "../../core/debrid/directDebridStreamPresentation.js";
 
+const STREAM_PREFETCH_TTL_MS = 5 * 60 * 1000;
+const STREAM_PREFETCH_MAX_ENTRIES = 2;
+
 class StreamRepository {
+  constructor() {
+    this.streamCache = new Map();
+    this.prefetchKey = "";
+    this.prefetchPromise = null;
+  }
+
+  streamCacheKey(type, videoId, options = {}) {
+    return [type, videoId, options?.season ?? -1, options?.episode ?? -1]
+      .map((entry) => String(entry ?? ""))
+      .join("|");
+  }
+
+  getCachedStreams(key) {
+    const entry = this.streamCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - Number(entry.at || 0) > STREAM_PREFETCH_TTL_MS) {
+      this.streamCache.delete(key);
+      return null;
+    }
+    this.streamCache.delete(key);
+    this.streamCache.set(key, entry);
+    return entry.result;
+  }
+
+  cacheStreams(key, result) {
+    if (result?.status !== "success" || !Array.isArray(result.data) || !result.data.length) {
+      return;
+    }
+    this.streamCache.delete(key);
+    this.streamCache.set(key, { at: Date.now(), result });
+    while (this.streamCache.size > STREAM_PREFETCH_MAX_ENTRIES) {
+      const oldestKey = this.streamCache.keys().next().value;
+      if (!oldestKey) break;
+      this.streamCache.delete(oldestKey);
+    }
+  }
+
+  prefetchStreams(type, videoId, options = {}) {
+    const key = this.streamCacheKey(type, videoId, options);
+    const cached = this.getCachedStreams(key);
+    if (!type || !videoId || cached) {
+      return Promise.resolve(cached);
+    }
+    if (this.prefetchKey === key && this.prefetchPromise) {
+      return this.prefetchPromise;
+    }
+    this.prefetchKey = key;
+    this.prefetchPromise = this.getStreamsFromAllAddons(type, videoId, {
+      ...options,
+      backgroundPrefetch: true
+    }).finally(() => {
+      if (this.prefetchKey === key) {
+        this.prefetchKey = "";
+        this.prefetchPromise = null;
+      }
+    });
+    return this.prefetchPromise;
+  }
+
   async getStreamsFromAddon(baseUrl, type, videoId) {
     const url = this.buildStreamUrl(baseUrl, type, videoId);
     const result = await safeApiCall(() => StreamApi.getStreams(url));
@@ -20,6 +82,33 @@ class StreamRepository {
   }
 
   async getStreamsFromAllAddons(type, videoId, options = {}) {
+    const cacheKey = this.streamCacheKey(type, videoId, options);
+    const cached = options?.forceRefresh ? null : this.getCachedStreams(cacheKey);
+    if (cached) {
+      const onAddon = typeof options?.onAddon === "function" ? options.onAddon : null;
+      const onChunk = typeof options?.onChunk === "function" ? options.onChunk : null;
+      cached.data.forEach((group) => {
+        onAddon?.({
+          id: group.addonId,
+          baseUrl: group.addonBaseUrl,
+          displayName: group.addonName,
+          logo: group.addonLogo,
+          orderIndex: group.addonOrderIndex
+        });
+        onChunk?.({ status: "success", data: [group] });
+      });
+      return cached;
+    }
+    if (
+      !options?.backgroundPrefetch &&
+      this.prefetchKey === cacheKey &&
+      this.prefetchPromise
+    ) {
+      const prefetched = await this.prefetchPromise.catch(() => null);
+      if (prefetched?.status === "success") {
+        return prefetched;
+      }
+    }
     const installedAddons = (await addonRepository.getInstalledAddons()).map((addon, index) => ({
       ...addon,
       orderIndex: index
@@ -189,7 +278,9 @@ class StreamRepository {
         (left, right) => Number(left.addonOrderIndex || 0) - Number(right.addonOrderIndex || 0)
       );
     const pluginStreams = await pluginTask;
-    return { status: "success", data: [...addonsWithStreams, ...pluginStreams] };
+    const result = { status: "success", data: [...addonsWithStreams, ...pluginStreams] };
+    this.cacheStreams(cacheKey, result);
+    return result;
   }
 
   async getPluginStreams(type, videoId, options = {}) {

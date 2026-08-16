@@ -1,6 +1,7 @@
 ﻿import { Router } from "../../navigation/router.js";
 import { ScreenUtils } from "../../navigation/screen.js";
 import { metaRepository } from "../../../data/repository/metaRepository.js";
+import { streamRepository } from "../../../data/repository/streamRepository.js";
 import { watchProgressRepository } from "../../../data/repository/watchProgressRepository.js";
 import { savedLibraryRepository } from "../../../data/repository/savedLibraryRepository.js";
 import { watchedItemsRepository } from "../../../data/repository/watchedItemsRepository.js";
@@ -1670,6 +1671,7 @@ export const MetaDetailsScreen = {
       if (!hasMdbListRatings(this.meta?.mdbListRatings)) {
         void this.loadMdbListRatings(this.meta, refreshToken);
       }
+      this.prefetchPrimaryPlaybackTarget(refreshToken);
       this.maybeAutoOpenContinueWatchingStream();
       return;
     }
@@ -1859,6 +1861,7 @@ export const MetaDetailsScreen = {
     }
     this.render(meta);
     this.isLoadingDetail = false;
+    this.prefetchPrimaryPlaybackTarget(token);
     this.maybeAutoOpenContinueWatchingStream();
     void this.refreshTrailerSource(meta, token);
     void this.loadTraktComments({ force: true });
@@ -4750,6 +4753,39 @@ export const MetaDetailsScreen = {
     await this.openMovieStreamChooser({ startOver, manualSelection });
   },
 
+  prefetchPrimaryPlaybackTarget(token = this.detailLoadToken) {
+    const isSeries = isSeriesDetailMeta(this.meta, this.episodes);
+    const targetEpisode = isSeries
+      ? this.nextEpisodeToWatch ||
+        this.episodes?.find((entry) => entry.season === this.selectedSeason) ||
+        this.episodes?.[0] ||
+        null
+      : null;
+    const movieIdentity = isSeries ? null : resolveMovieStreamIdentity(this.meta, this.params);
+    const type = isSeries
+      ? "series"
+      : resolvePlayableDetailType(this.params?.itemType || this.meta?.type, this.meta);
+    const videoId = isSeries ? targetEpisode?.id : movieIdentity?.videoId;
+    if (!type || !videoId) {
+      return;
+    }
+    const itemId = isSeries
+      ? this.params?.itemId || this.meta?.id || ""
+      : movieIdentity?.itemId || this.params?.itemId || "";
+    setTimeout(() => {
+      if (token !== this.detailLoadToken || !this.container || Router.getCurrent() !== "detail") {
+        return;
+      }
+      void streamRepository
+        .prefetchStreams(type, videoId, {
+          itemId: String(itemId || ""),
+          season: targetEpisode?.season ?? null,
+          episode: targetEpisode?.episode ?? null
+        })
+        .catch((error) => console.warn("Detail stream prefetch failed", error));
+    }, 350);
+  },
+
   async toggleLibraryFromHero() {
     await savedLibraryRepository.toggle({
       contentId: this.params?.itemId,
@@ -6964,7 +7000,8 @@ export const MetaDetailsScreen = {
         ...options,
         useActiveFallback: false
       }),
-      ...(options.manualSelection ? { manualSelection: true } : {})
+      manualSelection: Boolean(options.manualSelection),
+      directAutoPlay: !options.manualSelection
     });
   },
 
@@ -6972,7 +7009,8 @@ export const MetaDetailsScreen = {
     this.stopTrailerPlaybackForNavigation();
     this.navigateToStreamScreenForMovie({
       ...this.getResumeParamsForProgress(this.getActiveResumeProgress(), options),
-      ...(options.manualSelection ? { manualSelection: true } : {})
+      manualSelection: Boolean(options.manualSelection),
+      directAutoPlay: !options.manualSelection
     });
   },
 

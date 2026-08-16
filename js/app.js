@@ -23,6 +23,8 @@ import { I18n } from "./i18n/index.js";
 import { getLatestAppUpdate } from "./core/update/appUpdateService.js";
 import { showAppUpdatePrompt } from "./ui/components/appUpdatePrompt.js";
 import { resolveExperienceRoute } from "./core/profile/experienceModeRouting.js";
+import { LayoutPreferences } from "./data/local/layoutPreferences.js";
+import { ThemeStore } from "./data/local/themeStore.js";
 
 // These legacy Web-only overrides are no longer user settings. Navigation now
 // uses the stable grid algorithm and simulator detection automatically.
@@ -213,6 +215,9 @@ async function enterWithLastProfile({ restoreWebOsRoute = false } = {}) {
     null;
   if (activeProfile) {
     await ProfileManager.setActiveProfile(activeProfile.id);
+    if (LayoutPreferences.applyForkVisualPresetOnce(activeProfile.id)) {
+      ThemeStore.setForProfile(activeProfile.id, { fontFamily: "INTER" });
+    }
     StartupSyncService.enableProfileScopedSync();
     detailWatchedEnrichmentService.invalidateAllCache();
     await I18n.init();

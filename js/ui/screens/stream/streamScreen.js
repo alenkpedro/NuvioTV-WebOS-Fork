@@ -942,6 +942,9 @@ export const StreamScreen = {
     // do not auto-resume or auto-play again. Otherwise exiting the player drops
     // back onto the stream list and immediately relaunches, looping forever.
     const returningFromPlayer = Boolean(navigationContext?.isBackNavigation);
+    this.directAutoPlayUiActive = Boolean(
+      !returningFromPlayer && this.params?.directAutoPlay && !this.params?.manualSelection
+    );
     this.autoResumeAttempted = returningFromPlayer;
     const playerSettings = PlayerSettingsStore.get();
     const reusableStream = playerSettings.streamReuseLastLinkEnabled
@@ -962,10 +965,9 @@ export const StreamScreen = {
     this.autoPlayAttempted = returningFromPlayer;
     this.cancelAutoPlayCountdown();
     this.cancelAutoPlaySelectionWait();
-    const autoPlayWaitSeconds = Math.max(
-      0,
-      Math.trunc(Number(playerSettings.streamAutoPlayTimeoutSeconds || 0))
-    );
+    const autoPlayWaitSeconds = this.directAutoPlayUiActive
+      ? 0
+      : Math.max(0, Math.trunc(Number(playerSettings.streamAutoPlayTimeoutSeconds || 0)));
     this.autoPlaySelectionReady = autoPlayWaitSeconds === 0;
     if (autoPlayWaitSeconds > 0 && autoPlayWaitSeconds !== 2147483647) {
       this.autoPlaySelectionWaitTimer = setTimeout(() => {
@@ -1375,8 +1377,14 @@ export const StreamScreen = {
     if (this.autoResumeUiActive || this.autoPlayAttempted || this.autoPlayCountdown) {
       return;
     }
-    // Resume already navigated away, or there is nothing to play.
-    if (Router.getCurrent() !== "stream" || !this.streams.length) {
+    if (Router.getCurrent() !== "stream") {
+      return;
+    }
+    if (!this.streams.length) {
+      if (allLoaded && this.directAutoPlayUiActive) {
+        this.directAutoPlayUiActive = false;
+        this.requestRender({ delayMs: 0 });
+      }
       return;
     }
     const settings = PlayerSettingsStore.get();
@@ -1386,12 +1394,22 @@ export const StreamScreen = {
     if (!allLoaded && !this.autoPlaySelectionReady) {
       return;
     }
+    // Direct Play must rank the complete pool. Picking from the first addon
+    // chunk is faster, but can select a worse source than the fork's winner.
+    if (this.params?.directAutoPlay && !allLoaded) {
+      return;
+    }
     // "Manual (choose stream)" is authoritative for a fresh stream screen.
     // Persisted binge groups may still guide an enabled auto-play mode and the
     // next-episode player flow, but must not turn Continue Watching or Details
     // into an implicit auto-play entry point.
-    const autoPlayMode = String(settings.streamAutoPlayMode || "MANUAL").toUpperCase();
-    if (autoPlayMode === "MANUAL" || !isAutoPlayEffectivelyEnabled(settings)) {
+    const autoPlayMode = this.params?.directAutoPlay
+      ? "SMART"
+      : String(settings.streamAutoPlayMode || "MANUAL").toUpperCase();
+    if (
+      autoPlayMode === "MANUAL" ||
+      (!this.params?.directAutoPlay && !isAutoPlayEffectivelyEnabled(settings))
+    ) {
       return;
     }
     const savedPreference =
@@ -1409,7 +1427,7 @@ export const StreamScreen = {
         .filter(Boolean)
     );
     const selected = selectAutoPlayStream(this.getFilteredStreams(), {
-      mode: settings.streamAutoPlayMode,
+      mode: autoPlayMode,
       source: settings.streamAutoPlaySource,
       regexPattern: settings.streamAutoPlayRegex,
       installedAddonNames,
@@ -1421,12 +1439,18 @@ export const StreamScreen = {
     if (!selected?.id) {
       if (allLoaded) {
         this.autoPlayAttempted = true;
+        if (this.directAutoPlayUiActive) {
+          this.directAutoPlayUiActive = false;
+          this.requestRender({ delayMs: 0 });
+        }
       }
       return;
     }
     this.autoPlayAttempted = true;
     this.cancelAutoPlaySelectionWait();
-    if (autoPlayMode === "SMART") {
+    if (this.directAutoPlayUiActive) {
+      void this.playStream(selected.id);
+    } else if (autoPlayMode === "SMART") {
       this.startAutoPlayCountdown(selected, 2);
     } else {
       void this.playStream(selected.id);
@@ -1525,6 +1549,29 @@ export const StreamScreen = {
           )}</div>
           ${title ? `<div class="stream-route-autoplay-name">${escapeHtml(title)}</div>` : ""}
         </div>
+      </div>`;
+  },
+
+  renderDirectAutoPlayOverlay() {
+    if (!this.directAutoPlayUiActive) {
+      return "";
+    }
+    const title = String(
+      this.params?.episodeTitle || this.params?.itemTitle || this.params?.playerTitle || ""
+    ).trim();
+    const logo = String(this.params?.logo || "").trim();
+    return `
+      <div class="stream-direct-play-loading">
+        <div class="stream-direct-play-identity">
+          ${
+            logo
+              ? `<img src="${escapeHtml(logo)}" class="stream-direct-play-logo" alt="${escapeHtml(title)}" />`
+              : `<div class="stream-direct-play-title">${escapeHtml(title)}</div>`
+          }
+        </div>
+        <div class="stream-direct-play-status">${escapeHtml(
+          t("stream_finding_source", {}, "Preparing best available stream")
+        )}</div>
       </div>`;
   },
 
@@ -2311,7 +2358,7 @@ export const StreamScreen = {
       body = `<div class="stream-route-empty">No sources found for this filter.</div>`;
     }
 
-    const routeContent = this.autoResumeUiActive
+    const routeContent = this.autoResumeUiActive || this.directAutoPlayUiActive
       ? ""
       : `
         <div class="stream-route-content">
@@ -2343,6 +2390,7 @@ export const StreamScreen = {
         <div class="stream-route-right-gradient"></div>
         ${routeContent}
         ${this.renderContinueWatchingResumeOverlay()}
+        ${this.renderDirectAutoPlayOverlay()}
         ${this.renderAutoPlayOverlay()}
       </div>
     `;
