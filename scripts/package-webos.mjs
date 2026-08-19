@@ -7,6 +7,7 @@ const dist = path.join(root, 'dist');
 const stage = path.join(dist, 'webos-app');
 const brandDir = path.join(stage, 'assets', 'brand');
 const upstreamBrand = 'https://raw.githubusercontent.com/ysosrs123/NuvioTV-Fork/nuvio-test/assets/brand';
+const upstreamLauncher = 'https://raw.githubusercontent.com/ysosrs123/NuvioTV-Fork/nuvio-test/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png';
 
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(stage, { recursive: true });
@@ -25,20 +26,22 @@ for (const dir of dirs) {
   fs.cpSync(src, path.join(stage, dir), { recursive: true });
 }
 
-async function downloadBrandAsset(name, destination) {
-  const response = await fetch(`${upstreamBrand}/${name}`);
-  if (!response.ok) throw new Error(`Failed to fetch upstream Nuvio brand asset ${name}: HTTP ${response.status}`);
+async function downloadAsset(url, destination, label) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to fetch ${label}: HTTP ${response.status}`);
   const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length < 1000) throw new Error(`Upstream brand asset ${name} looks invalid (${buffer.length} bytes)`);
+  if (buffer.length < 1000) throw new Error(`${label} looks invalid (${buffer.length} bytes)`);
   fs.writeFileSync(destination, buffer);
-  console.log(`Brand asset: ${name} (${buffer.length} bytes)`);
+  console.log(`${label}: ${buffer.length} bytes`);
 }
 
-await downloadBrandAsset('app_logo_wordmark.png', path.join(brandDir, 'app_logo_wordmark.png'));
-await downloadBrandAsset('app_logo_mark.png', path.join(brandDir, 'app_logo_mark.png'));
-// The installed LG launcher icon must be the same Nuvio mark used by ysosrs123.
-fs.copyFileSync(path.join(brandDir, 'app_logo_mark.png'), path.join(stage, 'icon.png'));
-fs.copyFileSync(path.join(brandDir, 'app_logo_mark.png'), path.join(stage, 'largeIcon.png'));
+await downloadAsset(`${upstreamBrand}/app_logo_wordmark.png`, path.join(brandDir, 'app_logo_wordmark.png'), 'Nuvio wordmark');
+await downloadAsset(upstreamLauncher, path.join(brandDir, 'ysosrs123_launcher.png'), 'ysosrs123 launcher icon');
+
+// Inside the UI, ysosrs123 itself uses app_logo_wordmark.png.
+// For the installed app icon, use its real Android launcher artwork instead of the official Nuvio mark.
+fs.copyFileSync(path.join(brandDir, 'ysosrs123_launcher.png'), path.join(stage, 'icon.png'));
+fs.copyFileSync(path.join(brandDir, 'ysosrs123_launcher.png'), path.join(stage, 'largeIcon.png'));
 
 const cli = process.platform === 'win32'
   ? path.join(root, 'node_modules', '.bin', 'ares-package.cmd')
