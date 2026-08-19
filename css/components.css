@@ -11759,18 +11759,20 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
 
 .player-stats-for-nerds {
   position: fixed;
-  top: 24px;
-  left: 24px;
+  top: min(2.5vw, 48px);
+  right: min(2.5vw, 48px);
   z-index: 34;
-  width: min(440px, calc(100vw - 48px));
-  padding: 14px 16px;
+  width: min(39.6vw, 760px);
+  max-height: calc(100vh - min(5vw, 96px));
+  padding: min(1.25vw, 24px) min(1.46vw, 28px);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.82);
+  border-radius: min(0.83vw, 16px);
+  background: rgba(10, 10, 10, 0.91);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
   color: #fff;
   pointer-events: none;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .player-stats-for-nerds.hidden {
@@ -11778,35 +11780,77 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
 }
 
 .player-stats-title {
-  margin-bottom: 8px;
-  color: var(--secondary-color);
-  font-size: 14px;
+  margin-bottom: min(0.73vw, 14px);
+  color: rgba(255, 255, 255, 0.96);
+  font-size: min(1.25vw, 24px);
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+}
+
+.player-stats-section + .player-stats-section {
+  margin-top: min(0.73vw, 14px);
+}
+
+.player-stats-section-title {
+  margin-bottom: min(0.26vw, 5px);
+  padding-bottom: min(0.26vw, 5px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: min(0.83vw, 16px);
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .player-stats-row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 3px 0;
-  font-size: 12px;
+  gap: min(0.63vw, 12px);
+  min-width: 0;
+  padding: min(0.16vw, 3px) 0;
+  font-size: min(0.94vw, 18px);
   line-height: 1.35;
 }
 
+.player-stats-dot {
+  flex: 0 0 auto;
+  width: min(0.42vw, 8px);
+  height: min(0.42vw, 8px);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.player-stats-dot-good {
+  background: #4caf50;
+}
+
+.player-stats-dot-warn {
+  background: #ffb300;
+}
+
+.player-stats-dot-bad {
+  background: #ef5350;
+}
+
 .player-stats-row span {
+  flex: 0 0 auto;
   color: rgba(255, 255, 255, 0.62);
 }
 
 .player-stats-row strong {
-  max-width: 68%;
+  min-width: 0;
+  max-width: 72%;
   overflow: hidden;
   color: #fff;
   font-weight: 600;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.player-ui-root.stats-for-nerds-visible .player-controls-top {
+  margin-right: min(41.7vw, 800px);
 }
 
 .player-loading-spinner-ring {

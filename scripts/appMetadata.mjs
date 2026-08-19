@@ -17,9 +17,15 @@ async function writeJson(filePath, value) {
 
 export async function readAppMetadata() {
   const packageJson = await readJson(packageJsonPath);
+  const version = String(packageJson?.version || "0.0.0").trim() || "0.0.0";
+  const upstreamVersion = String(packageJson?.upstreamVersion || version).trim() || version;
+  const forkRevision = String(packageJson?.forkRevision || "").trim();
   return {
     name: String(packageJson?.name || "").trim(),
-    version: String(packageJson?.version || "0.0.0").trim() || "0.0.0"
+    version,
+    upstreamVersion,
+    forkRevision,
+    displayVersion: forkRevision ? `${upstreamVersion}-${forkRevision}` : upstreamVersion
   };
 }
 

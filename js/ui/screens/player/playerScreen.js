@@ -1506,6 +1506,58 @@ function formatBytesPerSecond(value) {
   return `${Math.round(bytesPerSecond)} B/s`;
 }
 
+function formatBitsPerSecond(value) {
+  const bitsPerSecond = Number(value || 0);
+  if (!Number.isFinite(bitsPerSecond) || bitsPerSecond <= 0) {
+    return "";
+  }
+  if (bitsPerSecond >= 1_000_000) {
+    const megabits = bitsPerSecond / 1_000_000;
+    return `${megabits >= 10 ? megabits.toFixed(0) : megabits.toFixed(1)} Mbit/s`;
+  }
+  if (bitsPerSecond >= 1_000) {
+    return `${Math.round(bitsPerSecond / 1_000)} kbit/s`;
+  }
+  return `${Math.round(bitsPerSecond)} bit/s`;
+}
+
+function firstStatsValue(values = []) {
+  for (const value of values) {
+    if (value == null) {
+      continue;
+    }
+    const normalized = String(value).trim();
+    if (normalized) {
+      return normalized;
+    }
+  }
+  return "";
+}
+
+function getUrlStatsParts(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return { host: "", filename: "" };
+  }
+  try {
+    const parsed = new URL(raw, globalThis.location?.href || undefined);
+    const encodedFilename =
+      String(parsed.pathname || "")
+        .split("/")
+        .filter(Boolean)
+        .pop() || "";
+    let filename = encodedFilename;
+    try {
+      filename = decodeURIComponent(encodedFilename);
+    } catch (_) {
+      // Keep malformed URL path text encoded.
+    }
+    return { host: parsed.host || "", filename };
+  } catch (_) {
+    return { host: "", filename: "" };
+  }
+}
+
 function normalizeStreamBadgeChipColor(value = "") {
   const hex = String(value || "")
     .trim()
@@ -2526,6 +2578,8 @@ export const PlayerScreen = {
     this.bufferingSpinnerBaselineSeconds = null;
     this.moreActionsVisible = false;
     this.statsForNerdsVisible = false;
+    this.statsForNerdsStallCount = 0;
+    this.statsForNerdsStallActive = false;
     this.controlFocusZone = "buttons";
     this.stickyProgressFocus = false;
     this.autoHideControlsAfterSeek = false;
@@ -8390,6 +8444,10 @@ export const PlayerScreen = {
         this.updateLoadingVisibility();
         return;
       }
+      if (this.hasPresentedPlaybackFrame && !this.seekLoading && !this.statsForNerdsStallActive) {
+        this.statsForNerdsStallCount += 1;
+        this.statsForNerdsStallActive = true;
+      }
       this.dismissPauseOverlay();
       this.loadingVisible = true;
       this.updateLoadingVisibility();
@@ -8400,6 +8458,7 @@ export const PlayerScreen = {
     };
 
     const onPlaying = () => {
+      this.statsForNerdsStallActive = false;
       if (this.isStartupErrorVisible()) {
         if (!Environment.isWebOS()) {
           return;
@@ -9081,12 +9140,8 @@ export const PlayerScreen = {
 
   getControlButtonNodes() {
     return [
-      ...Array.from(
-        this.uiRefs?.controlButtons?.querySelectorAll?.(".player-control-btn") || []
-      ),
-      ...Array.from(
-        this.uiRefs?.utilityButtons?.querySelectorAll?.(".player-control-btn") || []
-      )
+      ...Array.from(this.uiRefs?.controlButtons?.querySelectorAll?.(".player-control-btn") || []),
+      ...Array.from(this.uiRefs?.utilityButtons?.querySelectorAll?.(".player-control-btn") || [])
     ];
   },
 
@@ -9790,10 +9845,14 @@ export const PlayerScreen = {
     return PLAYER_SPEEDS;
   },
 
-  getStatsForNerdsRows() {
+  getStatsForNerdsSections() {
     const video = PlayerController.video || null;
     const candidate = this.getCurrentStreamCandidate?.() || {};
-    const presentation = candidate.streamPresentation || candidate.raw?.streamPresentation || {};
+    const raw = candidate.raw || {};
+    const presentation = candidate.streamPresentation || raw.streamPresentation || {};
+    const sourceContext = this.getPlaybackSourceContext(candidate) || {};
+    const behaviorHints = candidate.behaviorHints || raw.behaviorHints || {};
+    const urlParts = getUrlStatsParts(this.activePlaybackUrl || candidate.url || raw.url || "");
     const quality = video?.getVideoPlaybackQuality?.() || null;
     const decodedFrames = Number(
       quality?.totalVideoFrames ?? video?.webkitDecodedFrameCount ?? video?.mozDecodedFrames ?? 0
@@ -9804,36 +9863,228 @@ export const PlayerScreen = {
     const current = this.getPlaybackCurrentSeconds();
     const buffered = this.getPlaybackBufferedSeconds();
     const bufferAhead = Number.isFinite(buffered) ? Math.max(0, buffered - current) : null;
+
+    const hls = PlayerController.hlsInstance || null;
+    const hlsLevelIndex = Number(hls?.currentLevel);
+    const hlsLevel =
+      Number.isFinite(hlsLevelIndex) && hlsLevelIndex >= 0
+        ? hls?.levels?.[hlsLevelIndex] || null
+        : null;
+    const dash = PlayerController.dashInstance || null;
+    let dashRepresentation = null;
+    try {
+      dashRepresentation = dash?.getCurrentRepresentationForType?.("video") || null;
+    } catch (_) {
+      dashRepresentation = null;
+    }
+    const videoWidth = Number(
+      video?.videoWidth || hlsLevel?.width || dashRepresentation?.width || 0
+    );
+    const videoHeight = Number(
+      video?.videoHeight || hlsLevel?.height || dashRepresentation?.height || 0
+    );
     const resolution =
-      Number(video?.videoWidth) > 0 && Number(video?.videoHeight) > 0
-        ? `${video.videoWidth} × ${video.videoHeight}`
+      videoWidth > 0 && videoHeight > 0
+        ? `${videoWidth} × ${videoHeight}`
         : presentation.resolution || "—";
-    const technical = [
+    const codecs = firstStatsValue([
+      hlsLevel?.videoCodec,
+      hlsLevel?.codecSet,
+      hlsLevel?.codecs,
+      dashRepresentation?.codecs,
+      dashRepresentation?.codec,
       presentation.encode,
-      candidate.mimeType || candidate.raw?.mimeType,
-      ...(Array.isArray(presentation.visualTags) ? presentation.visualTags.slice(0, 2) : []),
-      ...(Array.isArray(presentation.audioTags) ? presentation.audioTags.slice(0, 2) : [])
+      candidate.codec,
+      raw.codec,
+      candidate.mimeType,
+      raw.mimeType
+    ]);
+    const visualTags = Array.isArray(presentation.visualTags)
+      ? presentation.visualTags.filter(Boolean).slice(0, 3)
+      : [];
+    const frameRate = Number(hlsLevel?.frameRate || dashRepresentation?.frameRate || 0);
+    const videoBitrate = Number(
+      hlsLevel?.bitrate ||
+        dashRepresentation?.bandwidth ||
+        Number(dashRepresentation?.bitrateInKbit || 0) * 1000 ||
+        0 ||
+        candidate.bitrate ||
+        raw.bitrate ||
+        raw.bandwidth ||
+        0
+    );
+
+    let networkBitsPerSecond = Number(hls?.bandwidthEstimate || 0);
+    if (!networkBitsPerSecond && dash) {
+      try {
+        const dashKbps = Number(dash.getAverageThroughput?.("video") || 0);
+        networkBitsPerSecond = dashKbps > 0 ? dashKbps * 1000 : 0;
+      } catch (_) {
+        networkBitsPerSecond = 0;
+      }
+    }
+    const engineFsSnapshot = this.lastEngineFsStallStats || null;
+    if (!networkBitsPerSecond && Number(engineFsSnapshot?.downloadSpeed) > 0) {
+      networkBitsPerSecond = Number(engineFsSnapshot.downloadSpeed) * 8;
+    }
+
+    const selectedAudioEntry = this.getAudioEntries().find((entry) => entry?.selected) || null;
+    const selectedAudioTrack = selectedAudioEntry?.track || {};
+    const audioCodec = firstStatsValue([
+      getAuthoritativeAudioCodecValue(selectedAudioTrack),
+      selectedAudioTrack.audioCodec,
+      selectedAudioTrack.codec,
+      selectedAudioTrack.codecs,
+      ...(Array.isArray(presentation.audioTags) ? presentation.audioTags : [])
+    ]);
+    const audioChannels = firstStatsValue([
+      selectedAudioTrack.channelCount,
+      selectedAudioTrack.channels,
+      ...(Array.isArray(presentation.audioChannels) ? presentation.audioChannels : [])
+    ]);
+    const audioValue = [
+      firstStatsValue([selectedAudioEntry?.label]),
+      audioCodec ? formatAudioCodecName(audioCodec) : "",
+      audioChannels
     ]
       .filter(Boolean)
+      .filter((value, index, values) => values.indexOf(value) === index)
       .join(" · ");
-    const p2p = [this.torrentOverlayData?.speedText, this.torrentOverlayData?.detailText]
-      .filter(Boolean)
-      .join(" · ");
-    return [
-      [t("player_stats_engine", {}, "Engine"), PlayerController.playbackEngine || "HTML5"],
-      [t("player_stats_resolution", {}, "Resolution"), resolution],
-      [t("player_stats_format", {}, "Format"), technical || "—"],
-      [
-        t("player_stats_buffer", {}, "Buffer"),
-        bufferAhead == null ? "—" : `${bufferAhead.toFixed(1)} s`
-      ],
-      [
-        t("player_stats_frames", {}, "Frames"),
-        decodedFrames > 0 ? `${Math.max(0, droppedFrames)} / ${decodedFrames} dropped` : "—"
-      ],
-      [t("player_stats_speed", {}, "Speed"), `${this.getPlaybackSpeed()}×`],
-      ...(p2p ? [["P2P", p2p]] : [])
+
+    const droppedRatio = decodedFrames > 0 ? droppedFrames / decodedFrames : 0;
+    const droppedTone = droppedFrames <= 0 ? "good" : droppedRatio >= 0.01 ? "bad" : "warn";
+    const bufferTone =
+      bufferAhead == null ? "none" : bufferAhead >= 10 ? "good" : bufferAhead >= 3 ? "warn" : "bad";
+    const speedRatio = videoBitrate > 0 ? networkBitsPerSecond / videoBitrate : null;
+    const speedTone =
+      networkBitsPerSecond <= 0
+        ? "none"
+        : speedRatio == null || speedRatio >= 1.5
+          ? "good"
+          : speedRatio >= 1
+            ? "warn"
+            : "bad";
+    const stalls = Number(this.statsForNerdsStallCount || 0);
+    const fileSizeValue =
+      presentation.size ||
+      behaviorHints.videoSize ||
+      candidate.videoSize ||
+      raw.videoSize ||
+      raw.size;
+    const fileSize =
+      Number(fileSizeValue) > 0 ? formatBytes(fileSizeValue) : firstStatsValue([fileSizeValue]);
+    const filename = firstStatsValue([
+      presentation.filename,
+      behaviorHints.filename,
+      candidate.filename,
+      raw.filename,
+      raw.clientResolve?.filename,
+      urlParts.filename
+    ]);
+
+    const sections = [
+      {
+        id: "source",
+        label: "SOURCE",
+        rows: [
+          {
+            label: "Add-on",
+            value:
+              firstStatsValue([sourceContext.addonName, candidate.addonName, raw.addonName]) || "—"
+          },
+          {
+            label: "Provider",
+            value:
+              firstStatsValue([
+                presentation.serviceName,
+                sourceContext.sourceProviderId,
+                candidate.debridProviderName
+              ]) || "—"
+          },
+          { label: "Server", value: urlParts.host || "—" },
+          { label: "File", value: filename || "—" },
+          ...(fileSize ? [{ label: "Size", value: fileSize }] : [])
+        ]
+      },
+      {
+        id: "video",
+        label: "VIDEO",
+        rows: [
+          { label: t("player_stats_resolution", {}, "Resolution"), value: resolution },
+          { label: "Codec", value: codecs || "—" },
+          ...(visualTags.length ? [{ label: "HDR", value: visualTags.join(" · ") }] : []),
+          ...(videoBitrate > 0
+            ? [{ label: "Bitrate", value: formatBitsPerSecond(videoBitrate) }]
+            : []),
+          ...(frameRate > 0
+            ? [
+                {
+                  label: "Frame rate",
+                  value: `${frameRate.toFixed(frameRate % 1 ? 2 : 0)} fps`
+                }
+              ]
+            : []),
+          {
+            label: "Dropped",
+            value:
+              decodedFrames > 0
+                ? `${Math.max(0, droppedFrames)} / ${decodedFrames} (${(droppedRatio * 100).toFixed(2)}%)`
+                : "—",
+            tone: decodedFrames > 0 ? droppedTone : "none"
+          }
+        ]
+      },
+      {
+        id: "audio",
+        label: "AUDIO",
+        rows: [{ label: "Track", value: audioValue || "—" }]
+      },
+      {
+        id: "network",
+        label: "NETWORK",
+        rows: [
+          {
+            label: t("player_stats_buffer", {}, "Buffer"),
+            value: bufferAhead == null ? "—" : `${bufferAhead.toFixed(1)} s`,
+            tone: bufferTone
+          },
+          {
+            label: "Throughput",
+            value: networkBitsPerSecond > 0 ? formatBitsPerSecond(networkBitsPerSecond) : "—",
+            tone: speedTone
+          },
+          {
+            label: "Stalls",
+            value: String(stalls),
+            tone: stalls === 0 ? "good" : this.statsForNerdsStallActive ? "bad" : "warn"
+          },
+          {
+            label: t("player_stats_engine", {}, "Engine"),
+            value: PlayerController.playbackEngine || "HTML5"
+          },
+          ...(this.torrentOverlayData?.detailText
+            ? [{ label: "P2P", value: this.torrentOverlayData.detailText }]
+            : [])
+        ]
+      }
     ];
+
+    const memory = globalThis.performance?.memory;
+    if (Number(memory?.usedJSHeapSize) > 0) {
+      sections.push({
+        id: "system",
+        label: "SYSTEM",
+        rows: [
+          {
+            label: "JS memory",
+            value: [formatBytes(memory.usedJSHeapSize), formatBytes(memory.jsHeapSizeLimit)]
+              .filter(Boolean)
+              .join(" / ")
+          }
+        ]
+      });
+    }
+    return sections;
   },
 
   syncStatsForNerds() {
@@ -9841,22 +10092,36 @@ export const PlayerScreen = {
     if (!overlay) {
       return;
     }
+    this.uiRefs?.root?.classList.toggle("stats-for-nerds-visible", this.statsForNerdsVisible);
     overlay.classList.toggle("hidden", !this.statsForNerdsVisible);
     overlay.setAttribute("aria-hidden", this.statsForNerdsVisible ? "false" : "true");
     if (!this.statsForNerdsVisible) {
       return;
     }
-    overlay.innerHTML = `
+    const markup = `
       <div class="player-stats-title">${escapeHtml(t("player_stats_for_nerds", {}, "Stats for Nerds"))}</div>
-      ${this.getStatsForNerdsRows()
+      ${this.getStatsForNerdsSections()
         .map(
-          ([label, value]) => `
-            <div class="player-stats-row">
-              <span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>
-            </div>`
+          (section) => `
+            <section class="player-stats-section player-stats-section-${escapeAttribute(section.id)}">
+              <div class="player-stats-section-title">${escapeHtml(section.label)}</div>
+              ${section.rows
+                .map(
+                  ({ label, value, tone = "none" }) => `
+                    <div class="player-stats-row">
+                      <i class="player-stats-dot player-stats-dot-${escapeAttribute(tone)}"></i>
+                      <span>${escapeHtml(label)}</span>
+                      <strong title="${escapeAttribute(value)}">${escapeHtml(value)}</strong>
+                    </div>`
+                )
+                .join("")}
+            </section>`
         )
         .join("")}
     `;
+    if (overlay.innerHTML !== markup) {
+      overlay.innerHTML = markup;
+    }
   },
 
   hasKnownPlaybackDuration() {

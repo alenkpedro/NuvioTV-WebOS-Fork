@@ -151,6 +151,11 @@ http://127.0.0.1:8080
 
 ### webOS
 
+Fork releases use the upstream webOS version plus the Android fork-style `nt` revision, for
+example `0.3.41-nt1`. Because LG only accepts three numeric version components in
+`appinfo.json`, the installable package encodes that release as `0.3.41001`; `nt2` becomes
+`0.3.41002`. The public app UI and GitHub release keep the readable `0.3.41-ntN` label.
+
 Build a local `.ipk` package directly from this repository:
 
 ```bash
