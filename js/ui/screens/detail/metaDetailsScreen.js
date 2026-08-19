@@ -13,6 +13,7 @@ import { TmdbMetadataService } from "../../../core/tmdb/tmdbMetadataService.js";
 import { LayoutPreferences } from "../../../data/local/layoutPreferences.js";
 import { imdbEpisodeRatingsRepository } from "../../../data/repository/imdbEpisodeRatingsRepository.js";
 import { normalizeEpisodeImdbRating, parseEpisodeRuntimeMinutes } from "./episodeCardMetadata.js";
+import { createDetailNavigationCache } from "./detailNavigationCache.js";
 import { mdbListRepository } from "../../../data/repository/mdbListRepository.js";
 import { TmdbSettingsStore } from "../../../data/local/tmdbSettingsStore.js";
 import { PlayerSettingsStore } from "../../../data/local/playerSettingsStore.js";
@@ -1565,6 +1566,8 @@ export const MetaDetailsScreen = {
 
   async mount(params = {}, navigationContext = {}) {
     this.container = document.getElementById("detail");
+    this.detailNavigationCache?.disconnect?.();
+    this.detailNavigationCache = createDetailNavigationCache(this.container);
     ScreenUtils.show(this.container);
     this.stopTrailerPlayback({
       keepDom: false,
@@ -7994,45 +7997,23 @@ export const MetaDetailsScreen = {
       return false;
     }
 
-    const actions = Array.from(
-      this.container.querySelectorAll(".series-detail-actions .focusable")
-    );
-    const seasons = Array.from(
-      this.container.querySelectorAll(".series-season-row .series-season-btn.focusable")
-    );
-    const episodes = Array.from(
-      this.container.querySelectorAll(".series-episode-track .series-episode-card.focusable")
-    );
-    const insightTabs = Array.from(
-      this.container.querySelectorAll(".series-insight-tabs .series-insight-tab.focusable")
-    );
-    const castCards = Array.from(
-      this.container.querySelectorAll(".series-cast-track .series-cast-card.focusable")
-    );
-    const ratingSeasons = Array.from(
-      this.container.querySelectorAll(".series-rating-seasons .series-rating-season.focusable")
-    );
-    const ratingChips = Array.from(
-      this.container.querySelectorAll(
-        ".series-episode-ratings-grid .series-episode-rating-chip.focusable"
-      )
-    );
-    const moreLikeCards = Array.from(
-      this.container.querySelectorAll(".detail-morelike-track .detail-morelike-card.focusable")
-    );
-    const commentModes = Array.from(
-      this.container.querySelectorAll(".detail-comments-modes .detail-comments-mode.focusable")
-    );
-    const commentCards = Array.from(
-      this.container.querySelectorAll(".detail-comments-track .detail-comment-card.focusable")
-    );
+    const {
+      actions,
+      seasons,
+      episodes,
+      insightTabs,
+      seriesCastCards: castCards,
+      ratingSeasons,
+      ratingChips,
+      moreLikeCards,
+      commentModes,
+      commentCards,
+      companyTracks,
+      companyCards
+    } = this.detailNavigationCache.get();
     const moreLikeRememberedIndex = this.getRememberedRailIndex(
       this.getActivePreviewRailKey(),
       moreLikeCards
-    );
-    const companyTracks = Array.from(this.container.querySelectorAll(".detail-company-track"));
-    const companyCards = companyTracks.map((track) =>
-      Array.from(track.querySelectorAll(".detail-company-card.focusable"))
     );
     const rememberedCompanyIndex = (trackIndex = 0) =>
       this.getRememberedCompanyIndex(companyTracks, companyCards, trackIndex);
@@ -8490,31 +8471,19 @@ export const MetaDetailsScreen = {
     if (!current) {
       return false;
     }
-    const actions = Array.from(
-      this.container.querySelectorAll(".series-detail-actions .focusable")
-    );
-    const tabs = Array.from(
-      this.container.querySelectorAll(".series-insight-tabs .series-insight-tab.focusable")
-    );
-    const cast = Array.from(
-      this.container.querySelectorAll(".movie-cast-track .movie-cast-card.focusable")
-    );
-    const moreLikeCards = Array.from(
-      this.container.querySelectorAll(".detail-morelike-track .detail-morelike-card.focusable")
-    );
-    const commentModes = Array.from(
-      this.container.querySelectorAll(".detail-comments-modes .detail-comments-mode.focusable")
-    );
-    const commentCards = Array.from(
-      this.container.querySelectorAll(".detail-comments-track .detail-comment-card.focusable")
-    );
+    const {
+      actions,
+      insightTabs: tabs,
+      movieCastCards: cast,
+      moreLikeCards,
+      commentModes,
+      commentCards,
+      companyTracks,
+      companyCards
+    } = this.detailNavigationCache.get();
     const moreLikeRememberedIndex = this.getRememberedRailIndex(
       this.getActivePreviewRailKey(),
       moreLikeCards
-    );
-    const companyTracks = Array.from(this.container.querySelectorAll(".detail-company-track"));
-    const companyCards = companyTracks.map((track) =>
-      Array.from(track.querySelectorAll(".detail-company-card.focusable"))
     );
     const rememberedCompanyIndex = (trackIndex = 0) =>
       this.getRememberedCompanyIndex(companyTracks, companyCards, trackIndex);
@@ -9238,6 +9207,8 @@ export const MetaDetailsScreen = {
 
   cleanup() {
     this.detailLoadToken = (this.detailLoadToken || 0) + 1;
+    this.detailNavigationCache?.disconnect?.();
+    this.detailNavigationCache = null;
     this.cancelPendingEpisodeHold();
     this.cancelPendingSeasonHold();
     this.cancelPendingPosterHold();
