@@ -1,6 +1,6 @@
 {
   "id": "com.nuvio.tv.test",
-  "version": "0.3.41002",
+  "version": "0.4.0",
   "vendor": "Pedro Alencar",
   "type": "web",
   "main": "index.html",

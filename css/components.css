@@ -11757,6 +11757,133 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   min-height: 1.2em;
 }
 
+.player-stream-info-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 36;
+  color: #fff;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.72) 42%, transparent 82%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.22) 55%, transparent 100%),
+    rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.player-stream-info-overlay.hidden {
+  display: none;
+}
+
+.player-stream-info-content {
+  position: absolute;
+  left: min(5vw, 96px);
+  right: min(5vw, 96px);
+  bottom: min(4.17vw, 80px);
+  max-height: calc(100vh - min(8.33vw, 160px));
+  overflow: hidden;
+}
+
+.player-stream-info-section + .player-stream-info-section {
+  margin-top: min(1.15vw, 22px);
+}
+
+.player-stream-info-section-label {
+  margin-bottom: min(0.42vw, 8px);
+  color: rgba(255, 255, 255, 0.54);
+  font-size: min(0.94vw, 18px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.player-stream-info-source-row {
+  display: flex;
+  align-items: center;
+  gap: min(0.83vw, 16px);
+  min-width: 0;
+}
+
+.player-stream-info-logo {
+  flex: 0 0 auto;
+  width: min(3.75vw, 72px);
+  height: min(3.75vw, 72px);
+  border-radius: min(0.42vw, 8px);
+  object-fit: contain;
+}
+
+.player-stream-info-source-copy {
+  min-width: 0;
+  max-width: min(82vw, 1574px);
+}
+
+.player-stream-info-headline {
+  overflow: hidden;
+  font-size: min(1.88vw, 36px);
+  font-weight: 650;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-stream-info-subheadline {
+  margin-top: min(0.21vw, 4px);
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: min(1.25vw, 24px);
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-stream-info-description {
+  margin-top: min(0.31vw, 6px);
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: min(1.04vw, 20px);
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-stream-info-fields {
+  display: flex;
+  align-items: flex-start;
+  gap: min(2.5vw, 48px);
+  min-width: 0;
+}
+
+.player-stream-info-source-row + .player-stream-info-fields {
+  margin-top: min(0.83vw, 16px);
+}
+
+.player-stream-info-field {
+  flex: 0 1 auto;
+  min-width: min(7.29vw, 140px);
+  max-width: min(22.92vw, 440px);
+}
+
+.player-stream-info-field.grow {
+  flex: 1 1 min(42vw, 806px);
+  max-width: min(62.5vw, 1200px);
+}
+
+.player-stream-info-field-label {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: min(0.94vw, 18px);
+  line-height: 1.2;
+}
+
+.player-stream-info-field-value {
+  margin-top: min(0.16vw, 3px);
+  overflow: hidden;
+  color: #fff;
+  font-size: min(1.35vw, 26px);
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .player-stats-for-nerds {
   position: fixed;
   top: min(2.5vw, 48px);
@@ -12205,6 +12332,10 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   margin-top: 2px;
   font-size: 16px;
   color: rgba(239, 245, 251, 0.9);
+}
+
+.player-title-identity.logo-loaded + .player-subtitle {
+  margin-top: 10px;
 }
 
 .player-meta-tertiary {

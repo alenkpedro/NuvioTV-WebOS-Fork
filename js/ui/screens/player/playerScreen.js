@@ -2578,6 +2578,7 @@ export const PlayerScreen = {
     this.bufferingSpinnerTimer = null;
     this.bufferingSpinnerBaselineSeconds = null;
     this.moreActionsVisible = false;
+    this.streamInfoVisible = false;
     this.statsForNerdsVisible = false;
     this.statsForNerdsStallCount = 0;
     this.statsForNerdsStallActive = false;
@@ -5116,6 +5117,7 @@ export const PlayerScreen = {
           <div class="player-torrent-overlay-detail"></div>
         </div>
 
+        <div id="playerStreamInfo" class="player-stream-info-overlay hidden" aria-hidden="true"></div>
         <div id="playerStatsForNerds" class="player-stats-for-nerds hidden" aria-hidden="true"></div>
 
         <div id="playerParentalGuide" class="player-parental-guide hidden"></div>
@@ -5227,6 +5229,7 @@ export const PlayerScreen = {
             "#playerTorrentOverlay .player-torrent-overlay-detail"
           ),
           statsForNerds: uiRoot.querySelector("#playerStatsForNerds"),
+          streamInfo: uiRoot.querySelector("#playerStreamInfo"),
           streamBadges: uiRoot.querySelector("#playerStreamBadges"),
           titleIdentity: uiRoot.querySelector("#playerTitleIdentity"),
           titleLogo: uiRoot.querySelector("#playerTitleLogo"),
@@ -9110,34 +9113,41 @@ export const PlayerScreen = {
     }
 
     base.push({
-      action: "statsForNerds",
+      action: "streamInfo",
       icon: "assets/icons/ic_player_info.svg",
       useMask: true,
-      title: t("player_stats_for_nerds", {}, "Stream information"),
+      title: t("cd_stream_info", {}, "Stream information"),
       group: "utility"
     });
 
     base.push({
-      action: "subtitleDialog",
-      icon: "assets/icons/ic_player_subtitles.svg",
-      title: t("subtitle_dialog_title", {}, "Subtitles"),
+      action: "statsForNerds",
+      icon: "assets/icons/ic_player_stats.svg",
+      useMask: true,
+      title: t("player_stats_for_nerds", {}, "Stats for Nerds"),
       group: "utility"
     });
 
     base.push({
       action: "audioTrack",
-      icon:
-        this.selectedAudioTrackIndex >= 0 || this.selectedManifestAudioTrackId
-          ? "assets/icons/ic_player_audio_filled.svg"
-          : "assets/icons/ic_player_audio_outline.svg",
+      icon: "assets/icons/ic_player_audio_filled.svg",
       useMask: true,
       title: t("audio_dialog_title", {}, "Audio"),
       group: "utility"
     });
 
     base.push({
+      action: "subtitleDialog",
+      icon: "assets/icons/ic_player_subtitles.svg",
+      useMask: true,
+      title: t("subtitle_dialog_title", {}, "Subtitles"),
+      group: "utility"
+    });
+
+    base.push({
       action: "source",
       icon: "assets/icons/ic_player_source.svg",
+      useMask: true,
       title: t("sources_title", {}, "Sources"),
       group: "utility"
     });
@@ -9377,6 +9387,7 @@ export const PlayerScreen = {
 
   isDialogOpen() {
     return (
+      this.streamInfoVisible ||
       this.subtitleDialogVisible ||
       this.audioDialogVisible ||
       this.sourcesPanelVisible ||
@@ -10153,6 +10164,262 @@ export const PlayerScreen = {
       });
     }
     return sections;
+  },
+
+  getStreamInfoSections() {
+    const candidate = this.getCurrentStreamCandidate?.() || {};
+    const raw = candidate.raw || {};
+    const sourceContext = this.getPlaybackSourceContext(candidate) || {};
+    const statsSections = this.getStatsForNerdsSections();
+    const statsSection = (id) => statsSections.find((section) => section.id === id) || { rows: [] };
+    const statsValue = (sectionId, label) =>
+      statsSection(sectionId).rows.find((row) => row.label === label)?.value || "";
+    const validValue = (value) => {
+      const normalized = String(value ?? "").trim();
+      return normalized && normalized !== "—" ? normalized : "";
+    };
+
+    const sourceName = firstStatsValue([
+      sourceContext.addonName,
+      candidate.addonName,
+      raw.addonName,
+      statsValue("source", "Add-on")
+    ]);
+    const streamName = firstStatsValue([
+      candidate.name,
+      candidate.label,
+      raw.name,
+      raw.label,
+      candidate.title,
+      raw.title
+    ]);
+    const streamDescription = firstStatsValue([
+      candidate.description,
+      raw.description,
+      candidate.streamDescription,
+      raw.streamDescription
+    ]);
+    const addonLogo = firstStatsValue([
+      candidate.addonLogo,
+      raw.addonLogo,
+      candidate.logo,
+      raw.logo
+    ]);
+    const sourceFields = [
+      {
+        label: t("stream_info_player_engine", {}, "Player"),
+        value: validValue(PlayerController.playbackEngine || "HTML5")
+      }
+    ].filter((item) => item.value);
+
+    const fileFields = [
+      {
+        label: t("stream_info_filename", {}, "File name"),
+        value: validValue(statsValue("source", "File")),
+        grow: true
+      },
+      {
+        label: t("stream_info_size", {}, "Size"),
+        value: validValue(statsValue("source", "Size"))
+      }
+    ].filter((item) => item.value);
+
+    const videoRows = statsSection("video").rows;
+    const videoLabels = {
+      Resolution: t("stream_info_resolution", {}, "Resolution"),
+      Codec: t("stream_info_codec", {}, "Codec"),
+      HDR: "HDR",
+      Bitrate: t("stream_info_bitrate", {}, "Bitrate"),
+      "Frame rate": t("stream_info_frame_rate", {}, "Frame rate")
+    };
+    const videoFields = videoRows
+      .filter((row) => ["Resolution", "Codec", "HDR", "Bitrate", "Frame rate"].includes(row.label))
+      .map((row) => ({ label: videoLabels[row.label] || row.label, value: validValue(row.value) }))
+      .filter((item) => item.value);
+
+    const selectedAudioEntry = this.getAudioEntries().find((entry) => entry?.selected) || null;
+    const audioTrack = selectedAudioEntry?.track || {};
+    const audioCodec = firstStatsValue([
+      getAuthoritativeAudioCodecValue(audioTrack),
+      audioTrack.audioCodec,
+      audioTrack.codec,
+      audioTrack.codecs
+    ]);
+    const audioSampleRate = Number(
+      audioTrack.sampleRate || audioTrack.audioSamplingRate || audioTrack.samplingRate || 0
+    );
+    const audioFields = [
+      {
+        label: t("stream_info_codec", {}, "Codec"),
+        value: validValue(audioCodec ? formatAudioCodecName(audioCodec) : "")
+      },
+      {
+        label: t("stream_info_channels", {}, "Channels"),
+        value: validValue(audioTrack.channelCount || audioTrack.channels || "")
+      },
+      {
+        label: t("stream_info_sample_rate", {}, "Sample rate"),
+        value: audioSampleRate > 0 ? `${Math.round(audioSampleRate / 1000)} kHz` : ""
+      },
+      {
+        label: t("stream_info_language", {}, "Language"),
+        value: validValue(
+          selectedAudioEntry?.languageLabel ||
+            selectedAudioEntry?.language ||
+            audioTrack.language ||
+            audioTrack.lang
+        )
+      },
+      ...(!audioCodec && !audioTrack.channelCount && !audioTrack.channels
+        ? [
+            {
+              label: t("stream_info_name", {}, "Name"),
+              value: validValue(statsValue("audio", "Track"))
+            }
+          ]
+        : [])
+    ].filter((item) => item.value);
+
+    const selectedSubtitle = [
+      ...this.getSubtitleEntries("builtIn"),
+      ...this.getSubtitleEntries("addons")
+    ].find((entry) => entry?.selected && entry.id !== "subtitle-off");
+    const subtitleTrack = selectedSubtitle?.track || {};
+    const subtitleFields = selectedSubtitle
+      ? [
+          {
+            label: t("stream_info_name", {}, "Name"),
+            value: validValue(selectedSubtitle.label)
+          },
+          {
+            label: t("stream_info_codec", {}, "Codec"),
+            value: validValue(subtitleTrack.codec || subtitleTrack.mimeType || "")
+          },
+          {
+            label: t("stream_info_language", {}, "Language"),
+            value: validValue(
+              selectedSubtitle.languageLabel ||
+                selectedSubtitle.language ||
+                subtitleTrack.language ||
+                subtitleTrack.lang
+            )
+          },
+          {
+            label: t("stream_info_source", {}, "Source"),
+            value: validValue(
+              selectedSubtitle.sourceLabel ||
+                (String(selectedSubtitle.id || "").startsWith("subtitle-addon-")
+                  ? t("stream_info_subtitle_source_addon", {}, "Add-on")
+                  : t("stream_info_subtitle_source_embedded", {}, "Embedded"))
+            )
+          }
+        ].filter((item) => item.value)
+      : [];
+
+    return [
+      {
+        id: "source",
+        label: t("stream_info_section_source", {}, "SOURCE"),
+        headline: validValue(sourceName),
+        subheadline: validValue(streamName),
+        description: validValue(streamDescription),
+        logo: validValue(addonLogo),
+        fields: sourceFields
+      },
+      {
+        id: "file",
+        label: t("stream_info_section_file", {}, "FILE"),
+        fields: fileFields
+      },
+      {
+        id: "video",
+        label: t("stream_info_section_video", {}, "VIDEO"),
+        fields: videoFields
+      },
+      {
+        id: "audio",
+        label: t("stream_info_section_audio", {}, "AUDIO"),
+        fields: audioFields
+      },
+      {
+        id: "subtitle",
+        label: t("stream_info_section_subtitle", {}, "SUBTITLE"),
+        fields: subtitleFields
+      }
+    ].filter(
+      (section) =>
+        section.headline ||
+        section.subheadline ||
+        section.description ||
+        (Array.isArray(section.fields) && section.fields.length)
+    );
+  },
+
+  renderStreamInfoOverlay() {
+    const overlay = this.uiRefs?.streamInfo;
+    if (!overlay) {
+      return;
+    }
+    overlay.classList.toggle("hidden", !this.streamInfoVisible);
+    overlay.setAttribute("aria-hidden", this.streamInfoVisible ? "false" : "true");
+    if (!this.streamInfoVisible) {
+      overlay.innerHTML = "";
+      return;
+    }
+    overlay.innerHTML = `
+      <div class="player-stream-info-content">
+        ${this.getStreamInfoSections()
+          .map(
+            (section) => `
+              <section class="player-stream-info-section player-stream-info-section-${escapeAttribute(section.id)}">
+                <div class="player-stream-info-section-label">${escapeHtml(section.label)}</div>
+                ${
+                  section.headline || section.subheadline || section.description
+                    ? `<div class="player-stream-info-source-row">
+                        ${section.logo ? `<img class="player-stream-info-logo" src="${escapeAttribute(section.logo)}" alt="" decoding="async" referrerpolicy="no-referrer" />` : ""}
+                        <div class="player-stream-info-source-copy">
+                          ${section.headline ? `<div class="player-stream-info-headline">${escapeHtml(section.headline)}</div>` : ""}
+                          ${section.subheadline && section.subheadline !== section.headline ? `<div class="player-stream-info-subheadline">${escapeHtml(String(section.subheadline).replace(/\n/g, " · "))}</div>` : ""}
+                          ${section.description ? `<div class="player-stream-info-description">${escapeHtml(String(section.description).replace(/\n/g, " · "))}</div>` : ""}
+                        </div>
+                      </div>`
+                    : ""
+                }
+                ${
+                  section.fields?.length
+                    ? `<div class="player-stream-info-fields">
+                        ${section.fields
+                          .map(
+                            (field) => `<div class="player-stream-info-field${field.grow ? " grow" : ""}">
+                              <div class="player-stream-info-field-label">${escapeHtml(field.label)}</div>
+                              <div class="player-stream-info-field-value" title="${escapeAttribute(field.value)}">${escapeHtml(field.value)}</div>
+                            </div>`
+                          )
+                          .join("")}
+                      </div>`
+                    : ""
+                }
+              </section>`
+          )
+          .join("")}
+      </div>`;
+  },
+
+  openStreamInfoOverlay() {
+    this.cancelSeekPreview({ commit: false });
+    this.streamInfoVisible = true;
+    this.statsForNerdsVisible = false;
+    this.setControlsVisible(true, { focus: false });
+    this.syncStatsForNerds();
+    this.renderStreamInfoOverlay();
+    this.renderControlButtons();
+  },
+
+  closeStreamInfoOverlay() {
+    this.streamInfoVisible = false;
+    this.renderStreamInfoOverlay();
+    this.renderControlButtons();
+    this.resetControlsAutoHide();
   },
 
   syncStatsForNerds() {
@@ -18859,6 +19126,15 @@ export const PlayerScreen = {
       return;
     }
 
+    if (action === "streamInfo") {
+      if (this.streamInfoVisible) {
+        this.closeStreamInfoOverlay();
+      } else {
+        this.openStreamInfoOverlay();
+      }
+      return;
+    }
+
     if (action === "switchEngine") {
       this.switchPlaybackEngine();
       return;
@@ -18904,6 +19180,8 @@ export const PlayerScreen = {
     }
 
     if (action === "statsForNerds") {
+      this.streamInfoVisible = false;
+      this.renderStreamInfoOverlay();
       this.statsForNerdsVisible = !this.statsForNerdsVisible;
       this.syncStatsForNerds();
       this.renderControlButtons();
@@ -19232,6 +19510,7 @@ export const PlayerScreen = {
       this.speedDialogVisible ||
       this.episodePanelVisible ||
       this.moreActionsVisible ||
+      this.streamInfoVisible ||
       this.statsForNerdsVisible ||
       this.pauseOverlayVisible ||
       this.pauseOverlayTimer
@@ -19244,6 +19523,11 @@ export const PlayerScreen = {
         return true;
       }
       Router.back();
+      return true;
+    }
+
+    if (this.streamInfoVisible) {
+      this.closeStreamInfoOverlay();
       return true;
     }
 
@@ -19400,6 +19684,16 @@ export const PlayerScreen = {
     }
     if (this.paused) {
       this.schedulePauseOverlay();
+    }
+
+    if (this.streamInfoVisible) {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      event?.stopImmediatePropagation?.();
+      if (isSelectKeyCode(keyCode) || keyCode === 66) {
+        this.closeStreamInfoOverlay();
+      }
+      return;
     }
 
     if (this.episodePanelVisible && this.handleEpisodePanelKey(event)) {
