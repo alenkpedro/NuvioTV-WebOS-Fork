@@ -1,0 +1,32 @@
+{
+  "paging": {
+    "page": 1,
+    "count": 1,
+    "maxPage": 1,
+    "itemsTotal": 1
+  },
+  "packages": [
+    {
+      "id": "com.alenkpedro.nuvio.enhanced",
+      "title": "Nuvio Enhanced",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-WebOS-Fork/main/icon.png",
+      "manifest": {
+        "id": "com.alenkpedro.nuvio.enhanced",
+        "version": "0.1.0",
+        "type": "web",
+        "title": "Nuvio Enhanced",
+        "appDescription": "LG webOS-focused Nuvio fork inspired by ysosrs123/NuvioTV-Fork.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-WebOS-Fork/main/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-WebOS-Fork",
+        "rootRequired": false,
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-WebOS-Fork/releases/download/webos-latest/Nuvio-Enhanced-webOS-0.1.0.ipk",
+        "ipkHash": {
+          "sha256": "c8101dc4a81ab67231105627e335e406eb203ebb5b11654579a7997f03c475bb"
+        },
+        "ipkSize": 13738
+      },
+      "pool": "main",
+      "shortDescription": "LG webOS-focused Nuvio fork inspired by ysosrs123/NuvioTV-Fork."
+    }
+  ]
+}
