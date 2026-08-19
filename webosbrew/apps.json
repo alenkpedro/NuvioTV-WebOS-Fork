@@ -21,9 +21,9 @@
         "rootRequired": false,
         "ipkUrl": "https://github.com/alenkpedro/NuvioTV-WebOS-Fork/releases/download/webos-latest/Nuvio-Enhanced-webOS-0.2.0.ipk",
         "ipkHash": {
-          "sha256": "fec86ee8d9cf2c8ec0a5cae84ace40fc8451962be1d6cbdd3d99108d4840aa14"
+          "sha256": "a1464f680da2337f5b9f9a22a5cd4c3f54c4f068772f9a24dfde36af1ca3e91a"
         },
-        "ipkSize": 15576
+        "ipkSize": 15580
       },
       "pool": "main",
       "shortDescription": "LG webOS-focused Nuvio fork inspired by ysosrs123/NuvioTV-Fork."
