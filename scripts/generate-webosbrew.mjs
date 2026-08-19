@@ -7,46 +7,40 @@ if (!ipkPath || !fs.existsSync(ipkPath)) {
   console.error('Usage: node scripts/generate-webosbrew.mjs <path-to-ipk>');
   process.exit(1);
 }
-
 const appinfo = JSON.parse(fs.readFileSync('appinfo.json', 'utf8'));
 const data = fs.readFileSync(ipkPath);
 const sha256 = crypto.createHash('sha256').update(data).digest('hex');
 const size = data.length;
 const filename = path.basename(ipkPath);
-
 const owner = process.env.GITHUB_REPOSITORY?.split('/')[0] || 'alenkpedro';
 const repo = process.env.GITHUB_REPOSITORY?.split('/')[1] || 'NuvioTV-WebOS-Fork';
 const tag = process.env.RELEASE_TAG || 'webos-latest';
 const sourceUrl = `https://github.com/${owner}/${repo}`;
-const rawBase = `https://raw.githubusercontent.com/${owner}/${repo}/main`;
 const ipkUrl = `https://github.com/${owner}/${repo}/releases/download/${tag}/${filename}`;
-
+const iconUri = 'https://raw.githubusercontent.com/ysosrs123/NuvioTV-Fork/nuvio-test/assets/brand/app_logo_mark.png';
 const output = {
   paging: { page: 1, count: 1, maxPage: 1, itemsTotal: 1 },
-  packages: [
-    {
+  packages: [{
+    id: appinfo.id,
+    title: appinfo.title,
+    iconUri,
+    manifest: {
       id: appinfo.id,
+      version: appinfo.version,
+      type: appinfo.type || 'web',
       title: appinfo.title,
-      iconUri: `${rawBase}/icon.png`,
-      manifest: {
-        id: appinfo.id,
-        version: appinfo.version,
-        type: appinfo.type || 'web',
-        title: appinfo.title,
-        appDescription: appinfo.appDescription || appinfo.description,
-        iconUri: `${rawBase}/icon.png`,
-        sourceUrl,
-        rootRequired: false,
-        ipkUrl,
-        ipkHash: { sha256 },
-        ipkSize: size
-      },
-      pool: 'main',
-      shortDescription: appinfo.appDescription || appinfo.description
-    }
-  ]
+      appDescription: appinfo.appDescription || appinfo.description,
+      iconUri,
+      sourceUrl,
+      rootRequired: false,
+      ipkUrl,
+      ipkHash: { sha256 },
+      ipkSize: size
+    },
+    pool: 'main',
+    shortDescription: appinfo.appDescription || appinfo.description
+  }]
 };
-
 fs.mkdirSync('webosbrew', { recursive: true });
 fs.writeFileSync('webosbrew/apps.json', JSON.stringify(output, null, 2) + '\n');
 console.log(`Generated webosbrew/apps.json for ${filename}`);
