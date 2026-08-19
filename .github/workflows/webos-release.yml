@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: webos-release-main
+  cancel-in-progress: true
+
 jobs:
   build-release:
     runs-on: ubuntu-latest
@@ -32,41 +36,44 @@ jobs:
       - name: Build IPK
         run: npm run package:webos
 
-      - name: Resolve package name
+      - name: Resolve immutable package name
         id: pkg
         shell: bash
         run: |
           VERSION="$(node -p "require('./appinfo.json').version")"
-          IPK="dist/Nuvio-Enhanced-webOS-${VERSION}.ipk"
-          test -f "$IPK"
+          SOURCE="dist/Nuvio-Enhanced-webOS-${VERSION}.ipk"
+          test -f "$SOURCE"
+          SHORT_SHA="${GITHUB_SHA::12}"
+          IMMUTABLE="dist/Nuvio-Enhanced-webOS-${VERSION}-${SHORT_SHA}.ipk"
+          mv "$SOURCE" "$IMMUTABLE"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "ipk=$IPK" >> "$GITHUB_OUTPUT"
-          echo "filename=$(basename "$IPK")" >> "$GITHUB_OUTPUT"
+          echo "ipk=$IMMUTABLE" >> "$GITHUB_OUTPUT"
+          echo "filename=$(basename "$IMMUTABLE")" >> "$GITHUB_OUTPUT"
 
-      - name: Generate Homebrew repository manifest
-        env:
-          RELEASE_TAG: webos-latest
-        run: node scripts/generate-webosbrew.mjs "${{ steps.pkg.outputs.ipk }}"
-
-      - name: Publish continuous prerelease
+      - name: Publish immutable prerelease asset
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           if gh release view webos-latest >/dev/null 2>&1; then
-            gh release upload webos-latest "${{ steps.pkg.outputs.ipk }}" --clobber
+            gh release upload webos-latest "${{ steps.pkg.outputs.ipk }}"
             gh release edit webos-latest \
-              --title "Nuvio Enhanced webOS ${{ steps.pkg.outputs.version }}" \
-              --notes "Automatic LG webOS development build from main. Inspired by ysosrs123/NuvioTV-Fork; webOS platform layer adapted for LG TV." \
+              --title "Nuvio webOS ${{ steps.pkg.outputs.version }}" \
+              --notes "Automatic LG webOS development build from main. UI and behavior aligned with ysosrs123/NuvioTV-Fork; webOS platform layer adapted for LG TV." \
               --prerelease
           else
             gh release create webos-latest \
               "${{ steps.pkg.outputs.ipk }}" \
               --target "${GITHUB_SHA}" \
-              --title "Nuvio Enhanced webOS ${{ steps.pkg.outputs.version }}" \
-              --notes "Automatic LG webOS development build from main. Inspired by ysosrs123/NuvioTV-Fork; webOS platform layer adapted for LG TV." \
+              --title "Nuvio webOS ${{ steps.pkg.outputs.version }}" \
+              --notes "Automatic LG webOS development build from main. UI and behavior aligned with ysosrs123/NuvioTV-Fork; webOS platform layer adapted for LG TV." \
               --prerelease
           fi
+
+      - name: Generate Homebrew repository manifest from published asset
+        env:
+          RELEASE_TAG: webos-latest
+        run: node scripts/generate-webosbrew.mjs "${{ steps.pkg.outputs.ipk }}"
 
       - name: Commit Homebrew manifest
         shell: bash
@@ -79,11 +86,12 @@ jobs:
             exit 0
           fi
           git commit -m "chore: update webOS Homebrew manifest [skip ci]"
+          git pull --rebase origin main
           git push
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Nuvio-Enhanced-webOS-${{ steps.pkg.outputs.version }}
+          name: Nuvio-webOS-${{ steps.pkg.outputs.version }}-${{ github.sha }}
           path: ${{ steps.pkg.outputs.ipk }}
           if-no-files-found: error
