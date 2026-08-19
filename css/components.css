@@ -6087,13 +6087,13 @@ button:focus-visible {
   --modern-hero-copy-max-width: 42%;
   --modern-hero-logo-max-width: 440px;
   --modern-hero-logo-max-height: 200px;
-  --modern-hero-title-size: calc(var(--home-poster-width) * 0.36);
+  --modern-hero-title-size: 56px;
   --modern-hero-title-max-width: 100%;
-  --modern-hero-meta-size: calc(var(--home-poster-width) * 0.1);
+  --modern-hero-meta-size: 24px;
   --modern-hero-meta-max-width: 100%;
-  --modern-hero-secondary-size: calc(var(--home-poster-width) * 0.085);
-  --modern-hero-description-size: 22px;
-  --modern-hero-description-max-width: min(100%, 560px);
+  --modern-hero-secondary-size: 24px;
+  --modern-hero-description-size: 28px;
+  --modern-hero-description-max-width: 100%;
   --home-modern-portrait-poster-width: var(--home-poster-width);
   --home-modern-portrait-poster-height: calc(var(--home-modern-portrait-poster-width) * 1.5);
   --home-modern-portrait-expanded-width: calc(var(--home-modern-portrait-poster-width) * 2.66);
@@ -6536,22 +6536,22 @@ button:focus-visible {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 48px;
   padding: 0 0 var(--modern-rows-viewport-padding-bottom);
 }
 
 .home-screen-shell.home-layout-modern.home-modern-landscape-posters .home-modern-rows-scroll {
-  gap: 24px;
+  gap: 48px;
 }
 
 .home-screen-shell.home-layout-modern .home-modern-catalogs {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 48px;
 }
 
 .home-screen-shell.home-layout-modern.home-modern-landscape-posters .home-modern-catalogs {
-  gap: 24px;
+  gap: 48px;
 }
 
 .home-screen-shell.home-layout-modern .home-row {
@@ -6573,13 +6573,20 @@ button:focus-visible {
 }
 
 .home-screen-shell.home-layout-modern .home-row-head {
-  margin-bottom: 14px;
+  margin-bottom: 28px;
+  padding-right: var(--home-content-start);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .home-screen-shell.home-layout-modern .home-row-title {
-  font-size: 26px;
-  line-height: 1.2;
-  font-weight: 600;
+  margin: 0;
+  padding-bottom: 20px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 500;
+  letter-spacing: 4.4px;
+  text-transform: uppercase;
 }
 
 .home-screen-shell.home-layout-modern .home-track {
@@ -12123,6 +12130,55 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   text-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
   max-width: min(72vw, 980px);
   text-align: center;
+}
+
+.player-loading-stream-meta {
+  position: absolute;
+  left: 32px;
+  right: 32px;
+  bottom: 64px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 32px;
+  letter-spacing: 1px;
+  text-align: center;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+}
+
+.player-loading-stream-meta.hidden {
+  display: none;
+}
+
+.player-loading-source,
+.player-loading-filename {
+  width: 100%;
+  max-width: min(90vw, 1500px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-loading-source {
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+}
+
+.player-loading-filename {
+  display: -webkit-box;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.62);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.player-loading-stream-meta .player-loading-status {
+  min-height: 80px;
+  margin-top: 12px;
 }
 
 .player-loading-spinner-status {
@@ -22426,4 +22482,200 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Compact audio/subtitle pickers from the Android fork. Track selection is
+   the default view; presentation controls live in an explicit second layer. */
+.player-subtitle-modal,
+.player-audio-modal {
+  right: min(4.58vw, 88px);
+  bottom: min(2.92vw, 56px);
+  left: auto;
+  width: min(33.33vw, 640px);
+  height: auto;
+  max-height: min(86vh, 1000px);
+  padding: min(1.46vw, 28px) min(1.67vw, 32px);
+  border-radius: min(2.08vw, 40px);
+  background: rgba(0, 0, 0, 0.85);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+  overflow: hidden;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.player-subtitle-modal .player-dialog-title,
+.player-audio-modal .player-dialog-title {
+  margin: 0;
+  color: #fff;
+  font-size: min(1.67vw, 32px);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.player-dialog-divider {
+  flex: 0 0 auto;
+  height: 2px;
+  margin: min(1.25vw, 24px) 0 min(0.83vw, 16px);
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.player-panel-action-row {
+  flex: 0 0 auto;
+  min-height: min(4.17vw, 80px);
+  margin-bottom: min(0.83vw, 16px);
+  padding: 0 min(1.25vw, 24px);
+  border: 3px solid transparent;
+  border-radius: min(1.67vw, 32px);
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: min(1.67vw, 32px);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.player-panel-action-row.focused {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.player-panel-action-chevron {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: min(2.5vw, 48px);
+  font-weight: 300;
+  line-height: 1;
+}
+
+.player-flat-track-list,
+.player-audio-modal .player-audio-track-list,
+.player-subtitle-modal .player-subtitle-track-list {
+  width: 100%;
+  min-height: 0;
+  max-height: min(58vh, 720px);
+  padding: 0;
+  gap: min(0.63vw, 12px);
+  overflow-y: auto;
+}
+
+.player-flat-track-list .player-dialog-item,
+.player-audio-modal .player-audio-track-list .player-dialog-item {
+  width: 100%;
+  min-height: min(4.58vw, 88px);
+  box-sizing: border-box;
+  padding: min(0.73vw, 14px) min(1.25vw, 24px);
+  border: 3px solid transparent;
+  border-radius: min(1.67vw, 32px);
+  background: transparent;
+}
+
+.player-flat-track-list .player-dialog-item.focused,
+.player-flat-track-list .player-dialog-item.selected.focused,
+.player-audio-modal .player-audio-track-list .player-dialog-item.focused,
+.player-audio-modal .player-audio-track-list .player-dialog-item.selected.focused {
+  border-color: transparent;
+  background: #f4f4f4;
+  color: #171717;
+}
+
+.player-flat-track-list .player-dialog-item.selected:not(.focused),
+.player-audio-modal .player-audio-track-list .player-dialog-item.selected:not(.focused) {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.player-flat-track-list .player-dialog-item.focused .player-dialog-item-main,
+.player-flat-track-list .player-dialog-item.focused .player-dialog-item-sub,
+.player-flat-track-list .player-dialog-item.focused .player-dialog-item-check,
+.player-audio-modal .player-audio-track-list .player-dialog-item.focused .player-dialog-item-main,
+.player-audio-modal .player-audio-track-list .player-dialog-item.focused .player-dialog-item-sub,
+.player-audio-modal .player-audio-track-list .player-dialog-item.focused .player-dialog-item-check {
+  color: #171717;
+}
+
+.player-flat-track-list .player-dialog-item-main,
+.player-audio-modal .player-audio-track-list .player-dialog-item-main {
+  overflow: hidden;
+  font-size: min(1.67vw, 32px);
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-flat-track-list .player-dialog-item-sub,
+.player-audio-modal .player-audio-track-list .player-dialog-item-sub {
+  overflow: hidden;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: min(1.04vw, 20px);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-flat-track-list .player-dialog-item-check,
+.player-audio-modal .player-audio-track-list .player-dialog-item-check {
+  font-size: min(2.08vw, 40px);
+  font-weight: 400;
+}
+
+.player-subtitle-modal .player-subtitle-style-rail,
+.player-audio-modal .player-audio-controls-list {
+  width: 100%;
+  max-height: min(58vh, 720px);
+  gap: min(0.83vw, 16px);
+  padding: 0;
+  overflow-y: auto;
+}
+
+.player-subtitle-modal .player-dialog-style-item,
+.player-audio-modal .player-audio-control-card {
+  box-sizing: border-box;
+  border: 3px solid transparent;
+  border-radius: min(1.67vw, 32px);
+  background: rgba(255, 255, 255, 0.08);
+  padding: min(0.83vw, 16px);
+}
+
+.player-subtitle-modal .player-dialog-style-item.focused,
+.player-audio-modal .player-audio-control-card.focused {
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.player-audio-modal .player-audio-toggle.selected {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.player-subtitle-modal .player-dialog-style-item.disabled,
+.player-audio-modal .player-audio-control-card.disabled {
+  opacity: 0.48;
+}
+
+@media (max-width: 1280px), (max-height: 760px) {
+  .player-subtitle-modal,
+  .player-audio-modal {
+    right: 44px;
+    bottom: 28px;
+    width: min(42vw, 520px);
+    max-height: 88vh;
+    padding: 18px 20px;
+    border-radius: 24px;
+  }
+
+  .player-flat-track-list,
+  .player-audio-modal .player-audio-track-list,
+  .player-subtitle-modal .player-subtitle-track-list,
+  .player-subtitle-modal .player-subtitle-style-rail,
+  .player-audio-modal .player-audio-controls-list {
+    max-height: 60vh;
+  }
 }

@@ -1,5 +1,8 @@
 import { PlayerController } from "../../../core/player/playerController.js";
-import { buildPlayerTechnicalBadgeLabels } from "../../../core/player/playerOverlayMetadata.js";
+import {
+  buildPlayerLoadingStreamMetadata,
+  buildPlayerTechnicalBadgeLabels
+} from "../../../core/player/playerOverlayMetadata.js";
 import {
   audioTrackLabelConflictsWithCodec,
   formatAudioCodecName,
@@ -425,6 +428,9 @@ const SUBTITLE_FONT_STEP = 10;
 const SUBTITLE_VERTICAL_OFFSET_STEP = SUBTITLE_VERTICAL_OFFSET_PLAYER_STEP;
 const AUDIO_AMPLIFICATION_MIN_DB = 0;
 const AUDIO_AMPLIFICATION_MAX_DB = 10;
+const AUDIO_DELAY_MIN_MS = -3000;
+const AUDIO_DELAY_MAX_MS = 3000;
+const AUDIO_DELAY_STEP_MS = 50;
 const PLAYER_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const NEXT_EPISODE_PREFETCH_PERCENT = 0.9;
 const SKIP_INTERVAL_CHECK_MS = 250;
@@ -2343,6 +2349,7 @@ export const PlayerScreen = {
     this.embeddedSubtitleTracks = [];
     this.nextEpisodeTransitionMeta = null;
     this.subtitleDialogVisible = false;
+    this.subtitleDialogMode = "tracks";
     this.subtitleDialogTab = "builtIn";
     this.subtitleDialogIndex = 0;
     this.subtitleLanguageRailIndex = 0;
@@ -2392,9 +2399,12 @@ export const PlayerScreen = {
     this.webOsEmbeddedCueRefreshApplied = false;
 
     this.audioDialogVisible = false;
+    this.audioDialogMode = "tracks";
     this.audioDialogIndex = 0;
     this.audioMixFocusIndex = 0;
     this.audioFocusedColumn = "tracks";
+    this.audioDelayMs = 0;
+    this.audioDelayAvailable = false;
     this.selectedAudioTrackIndex = -1;
     this.embeddedAudioTracks = [];
     this.selectedEmbeddedAudioTrackIndex = -1;
@@ -5097,7 +5107,10 @@ export const PlayerScreen = {
               }
               <div class="player-loading-title">${escapeHtml(loadingMeta.title || this.params.playerTitle || this.params.itemId || "Nuvio")}</div>
             </div>
-            <div class="player-loading-subtitle${loadingMeta.subtitle ? "" : " hidden"}">${escapeHtml(loadingMeta.subtitle || "")}</div>
+          </div>
+          <div class="player-loading-stream-meta${loadingMeta.sourceLine || loadingMeta.filename ? "" : " hidden"}">
+            <div class="player-loading-source${loadingMeta.sourceLine ? "" : " hidden"}">${escapeHtml(loadingMeta.sourceLine || "")}</div>
+            <div class="player-loading-filename${loadingMeta.filename ? "" : " hidden"}">${escapeHtml(loadingMeta.filename || "")}</div>
             <div class="player-loading-status hidden"></div>
           </div>
         </div>
@@ -5240,7 +5253,9 @@ export const PlayerScreen = {
           loadingLogoFillClip: uiRoot.querySelector(".player-loading-logo-fill-clip"),
           loadingLogoFill: uiRoot.querySelector(".player-loading-logo-fill"),
           loadingTitle: uiRoot.querySelector(".player-loading-title"),
-          loadingSubtitle: uiRoot.querySelector(".player-loading-subtitle"),
+          loadingStreamMeta: uiRoot.querySelector(".player-loading-stream-meta"),
+          loadingSource: uiRoot.querySelector(".player-loading-source"),
+          loadingFilename: uiRoot.querySelector(".player-loading-filename"),
           loadingStatus: uiRoot.querySelector("#playerLoadingOverlay .player-loading-status"),
           bufferingStatus: uiRoot.querySelector("#playerBufferingSpinner .player-loading-status"),
           parentalGuide: uiRoot.querySelector("#playerParentalGuide"),
@@ -5296,6 +5311,11 @@ export const PlayerScreen = {
 
   getLoadingOverlayMeta() {
     const transition = this.nextEpisodeTransitionMeta || null;
+    const currentStream = this.getCurrentStreamCandidate() || {};
+    const streamMetadata = buildPlayerLoadingStreamMetadata(
+      currentStream,
+      this.getPlaybackSourceContext(currentStream) || this.activePlaybackSourceContext || {}
+    );
     return {
       title: String(
         transition?.title ||
@@ -5304,9 +5324,10 @@ export const PlayerScreen = {
           this.params?.itemId ||
           "Nuvio"
       ).trim(),
-      subtitle: String(transition?.subtitle || this.params?.playerSubtitle || "").trim(),
       logoUrl: String(transition?.logoUrl || this.params?.playerLogoUrl || "").trim(),
-      backdropUrl: String(transition?.backdropUrl || this.params?.playerBackdropUrl || "").trim()
+      backdropUrl: String(transition?.backdropUrl || this.params?.playerBackdropUrl || "").trim(),
+      sourceLine: streamMetadata.sourceLine,
+      filename: streamMetadata.filename
     };
   },
 
@@ -5317,13 +5338,13 @@ export const PlayerScreen = {
     }
     const loadingMeta = this.getLoadingOverlayMeta();
     const identity = this.uiRefs?.loadingIdentity;
-    const logo = this.uiRefs?.loadingLogo;
     const title = this.uiRefs?.loadingTitle;
-    const subtitle = this.uiRefs?.loadingSubtitle;
+    const logoBase = this.uiRefs?.loadingLogoBase;
+    const logoFill = this.uiRefs?.loadingLogoFill;
     if (identity) {
       identity.classList.toggle("has-logo", Boolean(loadingMeta.logoUrl));
     }
-    if (logo) {
+    [logoBase, logoFill].filter(Boolean).forEach((logo) => {
       if (loadingMeta.logoUrl) {
         if (logo.getAttribute("src") !== loadingMeta.logoUrl) {
           logo.setAttribute("src", loadingMeta.logoUrl);
@@ -5332,7 +5353,7 @@ export const PlayerScreen = {
       } else {
         logo.removeAttribute("src");
       }
-    }
+    });
     if (title) {
       title.textContent =
         loadingMeta.title ||
@@ -5341,10 +5362,18 @@ export const PlayerScreen = {
         this.params?.itemId ||
         "Nuvio";
     }
-    if (subtitle) {
-      subtitle.textContent = loadingMeta.subtitle || "";
-      subtitle.classList.toggle("hidden", !loadingMeta.subtitle);
+    if (this.uiRefs?.loadingSource) {
+      this.uiRefs.loadingSource.textContent = loadingMeta.sourceLine || "";
+      this.uiRefs.loadingSource.classList.toggle("hidden", !loadingMeta.sourceLine);
     }
+    if (this.uiRefs?.loadingFilename) {
+      this.uiRefs.loadingFilename.textContent = loadingMeta.filename || "";
+      this.uiRefs.loadingFilename.classList.toggle("hidden", !loadingMeta.filename);
+    }
+    this.uiRefs?.loadingStreamMeta?.classList.toggle(
+      "hidden",
+      !loadingMeta.sourceLine && !loadingMeta.filename && !this.loadingTorrentStatus
+    );
     const backdrop = overlay.querySelector(".player-loading-backdrop");
     if (backdrop instanceof HTMLElement) {
       backdrop.style.backgroundImage = loadingMeta.backdropUrl
@@ -5488,11 +5517,9 @@ export const PlayerScreen = {
   syncLoadingOverlayStatus() {
     const loadingStatus = this.uiRefs?.loadingStatus;
     const bufferingStatus = this.uiRefs?.bufferingStatus;
-    const subtitle = this.uiRefs?.loadingSubtitle;
     const statusText = String(this.loadingTorrentStatus || "").trim();
     const hasStatus =
       Boolean(statusText) && PlayerSettingsStore.get().showPlayerLoadingStatus !== false;
-    const hasSubtitle = Boolean(subtitle?.textContent?.trim());
     if (loadingStatus) {
       loadingStatus.textContent = statusText;
       loadingStatus.classList.toggle("hidden", !hasStatus);
@@ -5501,9 +5528,12 @@ export const PlayerScreen = {
       bufferingStatus.textContent = statusText;
       bufferingStatus.classList.toggle("hidden", !hasStatus);
     }
-    if (subtitle) {
-      subtitle.classList.toggle("hidden", !hasSubtitle || hasStatus);
-    }
+    this.uiRefs?.loadingStreamMeta?.classList.toggle(
+      "hidden",
+      !hasStatus &&
+        !this.uiRefs?.loadingSource?.textContent?.trim() &&
+        !this.uiRefs?.loadingFilename?.textContent?.trim()
+    );
   },
 
   isStartupErrorVisible() {
@@ -10390,7 +10420,9 @@ export const PlayerScreen = {
                     ? `<div class="player-stream-info-fields">
                         ${section.fields
                           .map(
-                            (field) => `<div class="player-stream-info-field${field.grow ? " grow" : ""}">
+                            (
+                              field
+                            ) => `<div class="player-stream-info-field${field.grow ? " grow" : ""}">
                               <div class="player-stream-info-field-label">${escapeHtml(field.label)}</div>
                               <div class="player-stream-info-field-value" title="${escapeAttribute(field.value)}">${escapeHtml(field.value)}</div>
                             </div>`
@@ -14660,8 +14692,13 @@ export const PlayerScreen = {
     const styleNode = dialog.querySelector(
       ".player-subtitle-style-rail .player-dialog-item.focused"
     );
+    const trackNode = dialog.querySelector(
+      ".player-subtitle-track-list .player-dialog-item.focused"
+    );
 
-    if (this.subtitleFocusedRail === "language") {
+    if (this.subtitleFocusedRail === "tracks") {
+      trackNode?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    } else if (this.subtitleFocusedRail === "language") {
       this.scrollSubtitleRailNodeIntoView(languageNode);
     } else if (this.subtitleFocusedRail === "options") {
       this.scrollSubtitleRailNodeIntoView(optionNode);
@@ -15598,6 +15635,7 @@ export const PlayerScreen = {
     this.cancelSeekPreview({ commit: false });
     this.syncTrackState();
     this.subtitleDialogVisible = true;
+    this.subtitleDialogMode = "tracks";
     this.audioDialogVisible = false;
     this.speedDialogVisible = false;
     this.sourcesPanelVisible = false;
@@ -15610,8 +15648,10 @@ export const PlayerScreen = {
     this.syncSubtitleOptionIndexForFocusedLanguage();
     this.subtitleStyleRailIndex = 0;
     this.subtitleStyleControlSide = "minus";
-    this.subtitleFocusedRail =
-      selectedLanguageKey === SUBTITLE_LANGUAGE_OFF_KEY ? "language" : "options";
+    const flatItems = this.getFlatSubtitleDialogItems();
+    const selectedFlatIndex = flatItems.findIndex((item) => item.selected);
+    this.subtitleDialogIndex = Math.max(0, selectedFlatIndex >= 0 ? selectedFlatIndex : 0);
+    this.subtitleFocusedRail = "tracks";
     this.subtitleDialogScrollMode = "start";
     this.setControlsVisible(true, { focus: false });
     this.renderSubtitleDialog();
@@ -16106,6 +16146,52 @@ export const PlayerScreen = {
     scheduleActivation();
   },
 
+  getFlatSubtitleDialogItems() {
+    const languageOrder = this.getSubtitleLanguageRailItems();
+    const options = this.collectSubtitleOptionItems();
+    const items = [];
+    const offOption = options.find((option) => option.languageKey === SUBTITLE_LANGUAGE_OFF_KEY);
+    items.push({
+      id: "subtitle-off",
+      title: t("subtitle_none", {}, "None"),
+      meta: "",
+      sourceLabel: "",
+      selected: Boolean(offOption?.selected),
+      entry: offOption?.entry ||
+        this.getSubtitleEntries("builtIn").find((entry) => entry.id === "subtitle-off") || {
+          trackIndex: -1
+        }
+    });
+    languageOrder.forEach((language) => {
+      if (language.key === SUBTITLE_LANGUAGE_OFF_KEY) return;
+      this.getSubtitleOptionsForLanguage(language.key).forEach((option) => {
+        items.push({
+          ...option,
+          title: [option.languageLabel || language.label, option.sourceLabel]
+            .filter(Boolean)
+            .join(" — "),
+          meta: option.meta || option.secondary || ""
+        });
+      });
+    });
+    return items;
+  },
+
+  setSubtitleDialogMode(mode = "tracks") {
+    this.subtitleDialogMode = mode === "settings" ? "settings" : "tracks";
+    if (this.subtitleDialogMode === "settings") {
+      this.subtitleFocusedRail = "style";
+      this.subtitleStyleRailIndex = 0;
+      this.subtitleStyleControlSide = "minus";
+    } else {
+      const items = this.getFlatSubtitleDialogItems();
+      const selectedIndex = items.findIndex((item) => item.selected);
+      this.subtitleDialogIndex = Math.max(0, selectedIndex >= 0 ? selectedIndex : 0);
+      this.subtitleFocusedRail = "tracks";
+    }
+    this.renderSubtitleDialog();
+  },
+
   renderSubtitleDialog() {
     const dialog = this.uiRefs?.subtitleDialog;
     if (!dialog) {
@@ -16118,20 +16204,10 @@ export const PlayerScreen = {
       return;
     }
 
-    const languages = this.getSubtitleLanguageRailItems();
-    this.subtitleLanguageRailIndex = clamp(
-      this.subtitleLanguageRailIndex,
-      0,
-      Math.max(0, languages.length - 1)
-    );
-    const activeLanguage =
-      languages[this.subtitleLanguageRailIndex]?.key || SUBTITLE_LANGUAGE_OFF_KEY;
-    const options = this.getSubtitleOptionsForLanguage(activeLanguage);
-    this.subtitleOptionRailIndex = clamp(
-      this.subtitleOptionRailIndex,
-      0,
-      Math.max(0, options.length - 1)
-    );
+    const mode = this.subtitleDialogMode === "settings" ? "settings" : "tracks";
+    dialog.classList.toggle("is-settings", mode === "settings");
+    const items = this.getFlatSubtitleDialogItems();
+    this.subtitleDialogIndex = clamp(this.subtitleDialogIndex, 0, Math.max(0, items.length - 1));
     const styleItems = this.getSubtitleStyleControls();
     this.subtitleStyleRailIndex = clamp(
       this.subtitleStyleRailIndex,
@@ -16144,9 +16220,8 @@ export const PlayerScreen = {
       this.trackDiscoveryInProgress ||
       (this.embeddedSubtitleLoading && this.canDiscoverEmbeddedSubtitleTracks())
     );
-    const showOptionsRail = activeLanguage !== SUBTITLE_LANGUAGE_OFF_KEY || subtitleLoadingVisible;
     const focusedStyleSide = this.subtitleStyleControlSide === "plus" ? "plus" : "minus";
-    const emptySubtitleOptionsMarkup = subtitleLoadingVisible
+    const emptySubtitleMarkup = subtitleLoadingVisible
       ? `
         <div class="player-dialog-empty player-dialog-loading">
           ${renderLoadingIndicator()}
@@ -16155,42 +16230,19 @@ export const PlayerScreen = {
       `
       : `<div class="player-dialog-empty">${escapeHtml(t("subtitle_none", {}, "No subtitles"))}</div>`;
 
+    const actionLabel =
+      mode === "settings"
+        ? t("panel_audio_back_to_tracks", {}, "Back to tracks")
+        : t("subtitle_style_title", {}, "Subtitle style");
     dialog.innerHTML = `
       <div class="player-dialog-title">${escapeHtml(t("subtitle_dialog_title", {}, "Subtitles"))}</div>
-      <div class="player-subtitle-overlay-grid">
-        <div class="player-subtitle-rail player-subtitle-language-rail">
-          ${languages
-            .map(
-              (item, index) => `
-          <div class="player-dialog-item focusable${item.selected ? " selected" : ""}${this.subtitleFocusedRail === "language" && index === this.subtitleLanguageRailIndex ? " focused" : ""}" data-subtitle-rail="language" data-subtitle-index="${index}">
-              <div class="player-dialog-item-main">${escapeHtml(item.label)}${item.count > 0 ? `<span class="player-subtitle-language-count">${item.count}</span>` : ""}</div>
-              <div class="player-dialog-item-sub">${item.key === SUBTITLE_LANGUAGE_OFF_KEY && subtitleLoadingVisible ? escapeHtml(t("subtitle_loading_builtin", {}, "Loading subtitle tracks...")) : ""}</div>
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-        <div class="player-subtitle-rail player-subtitle-options-rail${showOptionsRail ? "" : " hidden"}">
-          ${
-            options.length
-              ? options
-                  .map(
-                    (item, index) => `
-            <div class="player-dialog-item focusable${item.selected ? " selected" : ""}${this.subtitleFocusedRail === "options" && index === this.subtitleOptionRailIndex ? " focused" : ""}" data-subtitle-rail="options" data-subtitle-index="${index}">
-              <div class="player-subtitle-option-copy">
-                <span class="player-subtitle-source-chip">${escapeHtml(item.sourceLabel || "")}</span>
-                <div class="player-dialog-item-main">${escapeHtml(item.title || "")}</div>
-                ${item.meta ? `<div class="player-dialog-item-sub">${escapeHtml(item.meta)}</div>` : ""}
-              </div>
-              <div class="player-dialog-item-check">${item.selected ? "&#10003;" : ""}</div>
-            </div>
-          `
-                  )
-                  .join("")
-              : emptySubtitleOptionsMarkup
-          }
-        </div>
-        <div class="player-subtitle-rail player-subtitle-style-rail${showOptionsRail ? "" : " hidden"}">
+      <div class="player-dialog-divider"></div>
+      <div class="player-panel-action-row focusable${this.subtitleFocusedRail === "action" ? " focused" : ""}" data-subtitle-rail="action" data-subtitle-index="0">
+        <span>${escapeHtml(actionLabel)}</span><span class="player-panel-action-chevron">&#8250;</span>
+      </div>
+      ${
+        mode === "settings"
+          ? `<div class="player-subtitle-rail player-subtitle-style-rail">
           ${styleItems
             .map(
               (item, index) => `
@@ -16205,8 +16257,24 @@ export const PlayerScreen = {
           `
             )
             .join("")}
-        </div>
-      </div>
+        </div>`
+          : `<div class="player-dialog-list player-flat-track-list player-subtitle-track-list">
+          ${
+            items.length
+              ? items
+                  .map(
+                    (item, index) => `
+            <div class="player-dialog-item focusable${item.selected ? " selected" : ""}${this.subtitleFocusedRail === "tracks" && index === this.subtitleDialogIndex ? " focused" : ""}" data-subtitle-rail="tracks" data-subtitle-index="${index}">
+              <div class="player-dialog-item-main">${escapeHtml(item.title || "")}</div>
+              ${item.meta ? `<div class="player-dialog-item-sub">${escapeHtml(item.meta)}</div>` : ""}
+              <div class="player-dialog-item-check">${item.selected ? "&#10003;" : ""}</div>
+            </div>`
+                  )
+                  .join("")
+              : emptySubtitleMarkup
+          }
+        </div>`
+      }
     `;
     this.scrollSubtitleDialogIntoView();
     this.scheduleSubtitleDialogScrollIntoView();
@@ -16214,97 +16282,57 @@ export const PlayerScreen = {
 
   handleSubtitleDialogKey(event) {
     const keyCode = Number(event?.keyCode || 0);
-    const languages = this.getSubtitleLanguageRailItems();
-    const activeLanguage =
-      languages[this.subtitleLanguageRailIndex]?.key || SUBTITLE_LANGUAGE_OFF_KEY;
-    const options = this.getSubtitleOptionsForLanguage(activeLanguage);
+    const mode = this.subtitleDialogMode === "settings" ? "settings" : "tracks";
+    const items = this.getFlatSubtitleDialogItems();
     const styleItems = this.getSubtitleStyleControls();
     const styleItem = styleItems[this.subtitleStyleRailIndex];
 
     if (keyCode === 38) {
-      if (this.subtitleFocusedRail === "language") {
-        this.subtitleLanguageRailIndex = clamp(
-          this.subtitleLanguageRailIndex - 1,
-          0,
-          Math.max(0, languages.length - 1)
-        );
-        this.syncSubtitleOptionIndexForFocusedLanguage();
-      } else if (this.subtitleFocusedRail === "options") {
-        this.subtitleOptionRailIndex = clamp(
-          this.subtitleOptionRailIndex - 1,
-          0,
-          Math.max(0, options.length - 1)
-        );
-      } else {
+      if (this.subtitleFocusedRail === "action") return true;
+      if (mode === "settings") {
+        if (this.subtitleStyleRailIndex === 0) this.subtitleFocusedRail = "action";
         this.subtitleStyleRailIndex = clamp(
           this.subtitleStyleRailIndex - 1,
           0,
           Math.max(0, styleItems.length - 1)
         );
+      } else if (this.subtitleDialogIndex === 0) {
+        this.subtitleFocusedRail = "action";
+      } else {
+        this.subtitleDialogIndex = clamp(this.subtitleDialogIndex - 1, 0, items.length - 1);
       }
       this.renderSubtitleDialog();
       return true;
     }
     if (keyCode === 40) {
-      if (this.subtitleFocusedRail === "language") {
-        this.subtitleLanguageRailIndex = clamp(
-          this.subtitleLanguageRailIndex + 1,
-          0,
-          Math.max(0, languages.length - 1)
-        );
-        this.syncSubtitleOptionIndexForFocusedLanguage();
-      } else if (this.subtitleFocusedRail === "options") {
-        this.subtitleOptionRailIndex = clamp(
-          this.subtitleOptionRailIndex + 1,
-          0,
-          Math.max(0, options.length - 1)
-        );
+      if (this.subtitleFocusedRail === "action") {
+        this.subtitleFocusedRail = mode === "settings" ? "style" : "tracks";
       } else {
-        this.subtitleStyleRailIndex = clamp(
-          this.subtitleStyleRailIndex + 1,
-          0,
-          Math.max(0, styleItems.length - 1)
-        );
+        if (mode === "settings") {
+          this.subtitleStyleRailIndex = clamp(
+            this.subtitleStyleRailIndex + 1,
+            0,
+            Math.max(0, styleItems.length - 1)
+          );
+        } else {
+          this.subtitleDialogIndex = clamp(this.subtitleDialogIndex + 1, 0, items.length - 1);
+        }
       }
       this.renderSubtitleDialog();
       return true;
     }
     if (keyCode === 37) {
-      if (this.subtitleFocusedRail === "style") {
+      if (mode === "settings" && this.subtitleFocusedRail === "style") {
         if (this.subtitleStyleControlSide === "plus") {
           this.subtitleStyleControlSide = "minus";
           this.renderSubtitleDialog();
           return true;
-        } else {
-          this.subtitleFocusedRail = options.length ? "options" : "language";
-          this.subtitleStyleControlSide = "minus";
-          this.renderSubtitleDialog();
-          return true;
         }
-      } else if (this.subtitleFocusedRail === "options") {
-        this.subtitleFocusedRail = "language";
-        this.renderSubtitleDialog();
-        return true;
       }
       return true;
     }
     if (keyCode === 39) {
-      if (
-        this.subtitleFocusedRail === "language" &&
-        activeLanguage !== SUBTITLE_LANGUAGE_OFF_KEY &&
-        options.length
-      ) {
-        this.subtitleFocusedRail = "options";
-        this.renderSubtitleDialog();
-        return true;
-      }
-      if (this.subtitleFocusedRail === "options") {
-        this.subtitleFocusedRail = "style";
-        this.subtitleStyleControlSide = "minus";
-        this.renderSubtitleDialog();
-        return true;
-      }
-      if (this.subtitleFocusedRail === "style") {
+      if (mode === "settings" && this.subtitleFocusedRail === "style") {
         if (this.subtitleStyleControlSide === "minus") {
           this.subtitleStyleControlSide = "plus";
           this.renderSubtitleDialog();
@@ -16314,36 +16342,14 @@ export const PlayerScreen = {
       return true;
     }
     if (isSelectKeyCode(keyCode)) {
-      if (this.subtitleFocusedRail === "language") {
-        const language = languages[this.subtitleLanguageRailIndex];
-        if (!language) {
-          return true;
-        }
-        if (language.key === SUBTITLE_LANGUAGE_OFF_KEY) {
-          this.applySubtitleEntry(
-            this.getSubtitleEntries("builtIn").find((entry) => entry.id === "subtitle-off") || {
-              trackIndex: -1
-            }
-          );
-        } else {
-          const selected = this.selectFirstSubtitleOptionForLanguage(language.key, {
-            focusOptions: true
-          });
-          if (!selected) {
-            const nextOptions = this.getSubtitleOptionsForLanguage(language.key);
-            if (nextOptions.length) {
-              this.subtitleFocusedRail = "options";
-              this.subtitleOptionRailIndex = 0;
-            }
-          }
-        }
-        this.renderSubtitleDialog();
+      if (this.subtitleFocusedRail === "action") {
+        this.setSubtitleDialogMode(mode === "settings" ? "tracks" : "settings");
         return true;
       }
-      if (this.subtitleFocusedRail === "options") {
-        const option = options[this.subtitleOptionRailIndex];
-        if (option?.entry) {
-          this.applySubtitleEntry(option.entry);
+      if (mode === "tracks") {
+        const item = items[this.subtitleDialogIndex];
+        if (item?.entry) {
+          this.applySubtitleEntry(item.entry);
         }
         return true;
       }
@@ -16354,12 +16360,6 @@ export const PlayerScreen = {
           { isRepeat: Boolean(event?.repeat) }
         );
       }
-      return true;
-    }
-    if (this.subtitleFocusedRail === "style" && (keyCode === 10009 || keyCode === 461)) {
-      this.subtitleFocusedRail = options.length ? "options" : "language";
-      this.subtitleStyleControlSide = "minus";
-      this.renderSubtitleDialog();
       return true;
     }
     return (
@@ -16715,11 +16715,71 @@ export const PlayerScreen = {
     this.renderAudioDialog();
   },
 
+  setAudioDialogMode(mode = "tracks") {
+    this.audioDialogMode = mode === "settings" ? "settings" : "tracks";
+    if (this.audioDialogMode === "settings") {
+      this.audioFocusedColumn = "controls";
+      this.audioMixFocusIndex = 0;
+    } else {
+      const entries = this.getAudioEntries();
+      const selectedIndex = entries.findIndex((entry) => entry.selected);
+      this.audioDialogIndex = Math.max(0, selectedIndex >= 0 ? selectedIndex : 0);
+      this.audioFocusedColumn = entries.length ? "tracks" : "action";
+    }
+    this.renderAudioDialog();
+  },
+
+  getAudioDialogControls() {
+    return [
+      {
+        id: "delay",
+        title: t("audio_delay_label", {}, "Audio delay"),
+        value: `${(Number(this.audioDelayMs || 0) / 1000).toFixed(3)}s`,
+        helper: this.audioDelayAvailable
+          ? t("audio_delay_range", {}, "Range: -3.00s to 3.00s")
+          : t("audio_delay_unavailable", {}, "Unavailable with native TV audio"),
+        enabled: Boolean(this.audioDelayAvailable),
+        canDecrease: this.audioDelayAvailable && this.audioDelayMs > AUDIO_DELAY_MIN_MS,
+        canIncrease: this.audioDelayAvailable && this.audioDelayMs < AUDIO_DELAY_MAX_MS
+      },
+      {
+        id: "amplification",
+        title: t("audio_mix_label", {}, "Amplification (PCM)"),
+        value: `${Math.round(Number(this.audioAmplificationDb || 0))} dB`,
+        helper: this.audioAmplificationAvailable
+          ? t(
+              "audio_mix_range",
+              { min: AUDIO_AMPLIFICATION_MIN_DB, max: AUDIO_AMPLIFICATION_MAX_DB },
+              `Range ${AUDIO_AMPLIFICATION_MIN_DB}-${AUDIO_AMPLIFICATION_MAX_DB} dB`
+            )
+          : t("audio_mix_unavailable", {}, "Unavailable on this device"),
+        enabled: Boolean(this.audioAmplificationAvailable),
+        canDecrease:
+          this.audioAmplificationAvailable &&
+          Number(this.audioAmplificationDb || 0) > AUDIO_AMPLIFICATION_MIN_DB,
+        canIncrease:
+          this.audioAmplificationAvailable &&
+          Number(this.audioAmplificationDb || 0) < AUDIO_AMPLIFICATION_MAX_DB
+      },
+      {
+        id: "persist",
+        title: this.persistAudioAmplification
+          ? t("audio_mix_persist_on", {}, "Save amplification: On")
+          : t("audio_mix_persist_off", {}, "Save amplification: Off"),
+        value: "",
+        helper: t("audio_mix_persist_help", {}, "Remember amplification for future playback"),
+        enabled: true,
+        toggle: true
+      }
+    ];
+  },
+
   openAudioDialog() {
     this.cancelSeekPreview({ commit: false });
     this.syncTrackState();
     this.applyAudioAmplification();
     this.audioDialogVisible = true;
+    this.audioDialogMode = "tracks";
     this.subtitleDialogVisible = false;
     this.speedDialogVisible = false;
     this.sourcesPanelVisible = false;
@@ -16730,6 +16790,7 @@ export const PlayerScreen = {
     }
     const selectedEntry = entries.findIndex((entry) => entry.selected);
     this.audioDialogIndex = Math.max(0, selectedEntry >= 0 ? selectedEntry : 0);
+    this.audioFocusedColumn = entries.length ? "tracks" : "action";
     this.setControlsVisible(true, { focus: false });
     this.renderSubtitleDialog();
     this.renderAudioDialog();
@@ -16983,42 +17044,31 @@ export const PlayerScreen = {
       return;
     }
 
+    const mode = this.audioDialogMode === "settings" ? "settings" : "tracks";
+    dialog.classList.toggle("is-settings", mode === "settings");
     const entries = this.getAudioEntries();
     const hasSupportedEntries = entries.some((entry) => entry?.supported !== false);
-    const audioControls = [
-      {
-        id: "amplification",
-        title: t("audio_mix_label", {}, "Audio boost"),
-        value: `${Math.round(Number(this.audioAmplificationDb || 0))} dB`,
-        helper: this.audioAmplificationAvailable
-          ? t(
-              "audio_mix_range",
-              { min: AUDIO_AMPLIFICATION_MIN_DB, max: AUDIO_AMPLIFICATION_MAX_DB },
-              `Range ${AUDIO_AMPLIFICATION_MIN_DB}-${AUDIO_AMPLIFICATION_MAX_DB} dB`
-            )
-          : t("audio_mix_unavailable", {}, "Unavailable on this device"),
-        enabled: Boolean(this.audioAmplificationAvailable),
-        canDecrease:
-          this.audioAmplificationAvailable &&
-          Number(this.audioAmplificationDb || 0) > AUDIO_AMPLIFICATION_MIN_DB,
-        canIncrease:
-          this.audioAmplificationAvailable &&
-          Number(this.audioAmplificationDb || 0) < AUDIO_AMPLIFICATION_MAX_DB
-      },
-      {
-        id: "persist",
-        title: this.persistAudioAmplification
-          ? t("audio_mix_persist_on", {}, "Save audio boost: On")
-          : t("audio_mix_persist_off", {}, "Save audio boost: Off"),
-        value: "",
-        helper: t("audio_mix_persist_help", {}, "Remember boost for future playback"),
-        enabled: true,
-        toggle: true
-      }
-    ];
+    const audioControls = this.getAudioDialogControls();
     this.audioMixFocusIndex = clamp(this.audioMixFocusIndex, 0, audioControls.length - 1);
+    const actionLabel =
+      mode === "settings"
+        ? t("panel_audio_back_to_tracks", {}, "Back to tracks")
+        : t("panel_audio_adjustments", {}, "Delay and gain");
+    const headerMarkup = `
+      <div class="player-dialog-title">${escapeHtml(t("audio_dialog_title", {}, "Audio"))}</div>
+      <div class="player-dialog-divider"></div>
+      <div class="player-panel-action-row focusable${this.audioFocusedColumn === "action" ? " focused" : ""}" data-audio-column="action" data-audio-index="0">
+        <span>${escapeHtml(actionLabel)}</span><span class="player-panel-action-chevron">&#8250;</span>
+      </div>`;
+    if (mode === "settings") {
+      dialog.innerHTML = `
+        ${headerMarkup}
+        <div class="player-audio-controls-list">
+          ${audioControls.map((control, index) => this.renderAudioControlItem(control, index)).join("")}
+        </div>`;
+      return;
+    }
     if (!entries.length) {
-      this.audioFocusedColumn = "controls";
       const loading =
         this.embeddedAudioLoading ||
         (this.isCurrentSourceAdaptiveManifest() &&
@@ -17027,13 +17077,10 @@ export const PlayerScreen = {
         ? "Loading audio tracks..."
         : this.getUnavailableTrackMessage("audio");
       dialog.innerHTML = `
-        <div class="player-dialog-title">${escapeHtml(t("audio_dialog_title", {}, "Audio"))}</div>
+        ${headerMarkup}
         <div class="player-dialog-empty${loading ? " player-dialog-loading" : ""}">
           ${loading ? renderLoadingIndicator() : ""}
           <span>${escapeHtml(emptyMessage)}</span>
-        </div>
-        <div class="player-audio-controls-list">
-          ${audioControls.map((control, index) => this.renderAudioControlItem(control, index)).join("")}
         </div>
       `;
       return;
@@ -17041,10 +17088,9 @@ export const PlayerScreen = {
 
     this.audioDialogIndex = clamp(this.audioDialogIndex, 0, entries.length - 1);
     dialog.innerHTML = `
-      <div class="player-dialog-title">${escapeHtml(t("audio_dialog_title", {}, "Audio"))}</div>
+      ${headerMarkup}
       ${hasSupportedEntries ? "" : `<div class="player-audio-support-message">${escapeHtml(t("player.audio.noSupportedTracks", {}, "No supported audio tracks available"))}</div>`}
-      <div class="player-audio-overlay-grid">
-        <div class="player-dialog-list player-audio-track-list">
+      <div class="player-dialog-list player-flat-track-list player-audio-track-list">
           ${entries
             .map((entry, index) => {
               const selected = entry.selected;
@@ -17072,10 +17118,6 @@ export const PlayerScreen = {
             `;
             })
             .join("")}
-        </div>
-        <div class="player-audio-controls-list">
-          ${audioControls.map((control, index) => this.renderAudioControlItem(control, index)).join("")}
-        </div>
       </div>
     `;
     this.scrollAudioDialogIntoView();
@@ -17105,14 +17147,25 @@ export const PlayerScreen = {
   },
 
   activateAudioControl(direction = 0) {
-    if (this.audioMixFocusIndex === 0) {
+    const control = this.getAudioDialogControls()[this.audioMixFocusIndex];
+    if (control?.id === "delay") {
+      if (!this.audioDelayAvailable) return;
+      this.audioDelayMs = clamp(
+        Number(this.audioDelayMs || 0) + (direction < 0 ? -1 : 1) * AUDIO_DELAY_STEP_MS,
+        AUDIO_DELAY_MIN_MS,
+        AUDIO_DELAY_MAX_MS
+      );
+      this.renderAudioDialog();
+      return;
+    }
+    if (control?.id === "amplification") {
       if (!this.audioAmplificationAvailable) {
         return;
       }
       this.adjustAudioAmplification(direction < 0 ? -1 : 1);
       return;
     }
-    this.togglePersistAudioAmplification();
+    if (control?.id === "persist") this.togglePersistAudioAmplification();
   },
 
   scrollAudioDialogIntoView() {
@@ -17134,58 +17187,55 @@ export const PlayerScreen = {
       keyCode === 40 ||
       isSelectKeyCode(keyCode);
 
+    const mode = this.audioDialogMode === "settings" ? "settings" : "tracks";
+    const controls = this.getAudioDialogControls();
+
     if (keyCode === 37) {
-      if (this.audioFocusedColumn === "controls") {
-        if (this.audioMixFocusIndex === 0) {
-          this.activateAudioControl(-1);
-        } else if (entries.length) {
-          this.audioFocusedColumn = "tracks";
-          this.renderAudioDialog();
-        }
+      if (mode === "settings" && this.audioFocusedColumn === "controls") {
+        this.activateAudioControl(-1);
       }
       return true;
     }
 
     if (keyCode === 39) {
-      if (this.audioFocusedColumn === "tracks") {
-        if (!entries.length) {
-          this.audioFocusedColumn = "controls";
-          this.renderAudioDialog();
-          return true;
-        }
-        this.audioFocusedColumn = "controls";
-        this.renderAudioDialog();
-      } else if (this.audioMixFocusIndex === 0) {
+      if (mode === "settings" && this.audioFocusedColumn === "controls")
         this.activateAudioControl(1);
-      }
       return true;
     }
 
     if (keyCode === 38) {
-      if (this.audioFocusedColumn === "tracks") {
-        this.audioDialogIndex = clamp(this.audioDialogIndex - 1, 0, entries.length - 1);
+      if (this.audioFocusedColumn === "action") return true;
+      if (mode === "settings") {
+        if (this.audioMixFocusIndex === 0) this.audioFocusedColumn = "action";
+        this.audioMixFocusIndex = clamp(this.audioMixFocusIndex - 1, 0, controls.length - 1);
+      } else if (this.audioDialogIndex === 0) {
+        this.audioFocusedColumn = "action";
       } else {
-        this.audioMixFocusIndex = clamp(this.audioMixFocusIndex - 1, 0, 1);
+        this.audioDialogIndex = clamp(this.audioDialogIndex - 1, 0, entries.length - 1);
       }
       this.renderAudioDialog();
       return true;
     }
 
     if (keyCode === 40) {
-      if (this.audioFocusedColumn === "tracks") {
-        this.audioDialogIndex = clamp(this.audioDialogIndex + 1, 0, entries.length - 1);
+      if (this.audioFocusedColumn === "action") {
+        this.audioFocusedColumn = mode === "settings" ? "controls" : "tracks";
+      } else if (mode === "settings") {
+        this.audioMixFocusIndex = clamp(this.audioMixFocusIndex + 1, 0, controls.length - 1);
       } else {
-        this.audioMixFocusIndex = clamp(this.audioMixFocusIndex + 1, 0, 1);
+        this.audioDialogIndex = clamp(this.audioDialogIndex + 1, 0, entries.length - 1);
       }
       this.renderAudioDialog();
       return true;
     }
 
     if (isSelectKeyCode(keyCode)) {
-      if (this.audioFocusedColumn === "tracks") {
+      if (this.audioFocusedColumn === "action") {
+        this.setAudioDialogMode(mode === "settings" ? "tracks" : "settings");
+      } else if (mode === "tracks") {
         this.applyAudioTrack(this.audioDialogIndex, { rememberSelection: true });
       } else {
-        this.activateAudioControl(this.audioMixFocusIndex === 0 ? 1 : 0);
+        this.activateAudioControl(1);
       }
       return true;
     }
@@ -19235,7 +19285,9 @@ export const PlayerScreen = {
     if (subtitleNode && this.subtitleDialogVisible) {
       this.subtitleFocusedRail = subtitleNode.dataset.subtitleRail || "language";
       const index = Number(subtitleNode.dataset.subtitleIndex || 0);
-      if (this.subtitleFocusedRail === "language") {
+      if (this.subtitleFocusedRail === "tracks") {
+        this.subtitleDialogIndex = index;
+      } else if (this.subtitleFocusedRail === "language") {
         this.subtitleLanguageRailIndex = index;
         this.syncSubtitleOptionIndexForFocusedLanguage();
       } else if (this.subtitleFocusedRail === "options") {
@@ -19256,7 +19308,7 @@ export const PlayerScreen = {
       const index = Number(audioNode.dataset.audioIndex || 0);
       if (this.audioFocusedColumn === "tracks") {
         this.audioDialogIndex = index;
-      } else {
+      } else if (this.audioFocusedColumn === "controls") {
         this.audioMixFocusIndex = index;
       }
       return;
@@ -19426,7 +19478,9 @@ export const PlayerScreen = {
 
     const audioNode = target.closest?.("[data-audio-column]");
     if (audioNode && this.audioDialogVisible) {
-      if (this.audioFocusedColumn === "tracks") {
+      if (this.audioFocusedColumn === "action") {
+        this.setAudioDialogMode(this.audioDialogMode === "settings" ? "tracks" : "settings");
+      } else if (this.audioFocusedColumn === "tracks") {
         this.applyAudioTrack(this.audioDialogIndex, { rememberSelection: true });
       } else {
         this.activateAudioControl(this.audioMixFocusIndex === 0 ? 1 : 0);
@@ -19566,11 +19620,19 @@ export const PlayerScreen = {
     }
 
     if (this.subtitleDialogVisible) {
+      if (this.subtitleDialogMode === "settings") {
+        this.setSubtitleDialogMode("tracks");
+        return true;
+      }
       this.closeSubtitleDialog();
       return true;
     }
 
     if (this.audioDialogVisible) {
+      if (this.audioDialogMode === "settings") {
+        this.setAudioDialogMode("tracks");
+        return true;
+      }
       this.closeAudioDialog();
       return true;
     }

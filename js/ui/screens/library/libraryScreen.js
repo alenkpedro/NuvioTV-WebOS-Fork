@@ -30,6 +30,7 @@ import {
   setLegacySidebarExpanded
 } from "../../components/sidebarNavigation.js";
 import { renderLoadingIndicator } from "../../components/loadingIndicator.js";
+import { buildSpatialRows, findNearestNodeInSpatialRow } from "./spatialRows.js";
 
 const POSTER_HOLD_DELAY_MS = 650;
 const PICKER_MENU_EXIT_MS = 160;
@@ -106,30 +107,6 @@ function findNearestNodeByCenterX(referenceNode, nodes = []) {
     }
   });
   return bestNode;
-}
-
-function groupNodesByRow(nodes = [], tolerance = 28) {
-  const rows = [];
-  nodes.forEach((node) => {
-    const rect = node.getBoundingClientRect();
-    const top = rect.top;
-    const existingRow = rows.find((row) => Math.abs(row.top - top) <= tolerance);
-    if (existingRow) {
-      existingRow.nodes.push(node);
-      return;
-    }
-    rows.push({
-      top,
-      nodes: [node]
-    });
-  });
-  rows.sort((left, right) => left.top - right.top);
-  rows.forEach((row) => {
-    row.nodes.sort(
-      (left, right) => left.getBoundingClientRect().left - right.getBoundingClientRect().left
-    );
-  });
-  return rows;
 }
 
 function filterStructureSignature(state = {}) {
@@ -372,14 +349,14 @@ export const LibraryScreen = {
         : picker === "cloud_type"
           ? state.selectedCloudType || "__all__"
           : picker === "list"
-        ? state.selectedListKey
-        : picker === "type"
-          ? state.selectedTypeKey
-          : picker === "genre"
-            ? state.selectedGenre || "__all__"
-            : picker === "year"
-              ? state.selectedYear || "__all__"
-              : state.selectedSortKey;
+            ? state.selectedListKey
+            : picker === "type"
+              ? state.selectedTypeKey
+              : picker === "genre"
+                ? state.selectedGenre || "__all__"
+                : picker === "year"
+                  ? state.selectedYear || "__all__"
+                  : state.selectedSortKey;
     const selectedIndex = Math.max(
       0,
       options.findIndex((option) => option.value === currentValue)
@@ -403,9 +380,8 @@ export const LibraryScreen = {
   renderPickerGroups(state) {
     if (state.viewMode === LIBRARY_VIEW_MODE.CLOUD) {
       const providerLabel =
-        state.availableCloudProviders.find(
-          (option) => option.key === state.selectedCloudProviderId
-        )?.label || t("cloud_library_provider_all", {}, "All");
+        state.availableCloudProviders.find((option) => option.key === state.selectedCloudProviderId)
+          ?.label || t("cloud_library_provider_all", {}, "All");
       const typeLabel =
         state.availableCloudTypes.find((option) => option.key === state.selectedCloudType)?.label ||
         t("cloud_library_type_all", {}, "All");
@@ -1391,7 +1367,7 @@ export const LibraryScreen = {
     if (!anchors.length) {
       return null;
     }
-    const rows = groupNodesByRow(anchors);
+    const rows = buildSpatialRows(anchors);
     const rowIndex = rows.findIndex((row) => row.nodes.includes(current));
     if (rowIndex < 0) {
       return null;
@@ -1422,7 +1398,7 @@ export const LibraryScreen = {
     const cards = Array.from(
       this.container?.querySelectorAll(".library-grid-card.focusable") || []
     );
-    this.gridRows = cards.length ? groupNodesByRow(cards) : [];
+    this.gridRows = cards.length ? buildSpatialRows(cards) : [];
   },
 
   resolveRelativeGridNode(current, direction) {
@@ -1433,8 +1409,6 @@ export const LibraryScreen = {
     if (!rows.length) {
       return null;
     }
-    const currentRect = current.getBoundingClientRect();
-    const currentCenterX = currentRect.left + currentRect.width / 2;
     const rowIndex = rows.findIndex((row) => row.nodes.includes(current));
     if (rowIndex < 0) {
       return null;
@@ -1450,25 +1424,14 @@ export const LibraryScreen = {
     }
     if (direction === "up") {
       const previousRow = rows[rowIndex - 1];
-      return previousRow ? findNearestNodeByCenterX(current, previousRow.nodes) : current;
+      return previousRow ? findNearestNodeInSpatialRow(current, currentRow, previousRow) : current;
     }
     if (direction === "down") {
       const nextRow = rows[rowIndex + 1];
       if (!nextRow) {
         return current;
       }
-      let bestNode = nextRow.nodes[0] || null;
-      let bestDistance = Number.POSITIVE_INFINITY;
-      nextRow.nodes.forEach((node) => {
-        const rect = node.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const distance = Math.abs(centerX - currentCenterX);
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          bestNode = node;
-        }
-      });
-      return bestNode;
+      return findNearestNodeInSpatialRow(current, currentRow, nextRow);
     }
     return null;
   },

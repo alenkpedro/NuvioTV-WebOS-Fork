@@ -1430,8 +1430,11 @@
     <string name="audio_dialog_title">Áudio</string>
     <string name="audio_dialog_tab_tracks">Áudio</string>
     <string name="audio_dialog_tab_mix">Mixagem</string>
+    <string name="panel_audio_adjustments">Atraso e ganho</string>
+    <string name="panel_audio_back_to_tracks">Voltar às faixas</string>
     <string name="audio_delay_label">Atraso do Áudio</string>
     <string name="audio_delay_range">Intervalo: %1$.2fs a %2$.2fs</string>
+    <string name="audio_delay_unavailable">Indisponível com áudio nativo da TV</string>
     <string name="audio_mix_label">Amplificação (PCM)</string>
     <string name="audio_mix_value_db">%1$d dB</string>
     <string name="audio_mix_persist_on">Manter entre sessões: LIGADO</string>

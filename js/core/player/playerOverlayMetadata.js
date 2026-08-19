@@ -65,3 +65,39 @@ export function buildPlayerTechnicalBadgeLabels(stream = {}, playback = {}) {
     })
     .slice(0, 6);
 }
+
+export function buildPlayerLoadingStreamMetadata(stream = {}, sourceContext = {}) {
+  const raw = stream.raw || {};
+  const origin = stream.streamOrigin || raw.streamOrigin || {};
+  const presentation = stream.streamPresentation || raw.streamPresentation || {};
+  const behaviorHints = stream.behaviorHints || raw.behaviorHints || {};
+  const resolve = stream.clientResolve || raw.clientResolve || {};
+  const addonName = firstText([
+    sourceContext.addonName,
+    stream.addonName,
+    raw.addonName,
+    origin.addonName
+  ]);
+  const providerName = firstText([
+    stream.providerName,
+    raw.providerName,
+    presentation.provider,
+    resolve.service
+  ]);
+  const sourceLine = [addonName, providerName]
+    .filter(Boolean)
+    .filter(
+      (value, index, values) =>
+        values.findIndex((candidate) => candidate.toLowerCase() === value.toLowerCase()) === index
+    )
+    .join(" · ");
+  const filename = firstText([
+    presentation.filename,
+    behaviorHints.filename,
+    stream.filename,
+    raw.filename,
+    resolve.filename
+  ]);
+
+  return { sourceLine, filename };
+}
