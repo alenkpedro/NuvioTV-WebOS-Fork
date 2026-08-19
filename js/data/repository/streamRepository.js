@@ -10,11 +10,10 @@ import { DebridStreamPresentation } from "../../core/debrid/directDebridStreamPr
 const STREAM_PREFETCH_TTL_MS = 5 * 60 * 1000;
 const STREAM_PREFETCH_MAX_ENTRIES = 2;
 
-class StreamRepository {
+export class StreamRepository {
   constructor() {
     this.streamCache = new Map();
-    this.prefetchKey = "";
-    this.prefetchPromise = null;
+    this.prefetchPromises = new Map();
   }
 
   streamCacheKey(type, videoId, options = {}) {
@@ -54,20 +53,20 @@ class StreamRepository {
     if (!type || !videoId || cached) {
       return Promise.resolve(cached);
     }
-    if (this.prefetchKey === key && this.prefetchPromise) {
-      return this.prefetchPromise;
+    const pending = this.prefetchPromises.get(key);
+    if (pending) {
+      return pending;
     }
-    this.prefetchKey = key;
-    this.prefetchPromise = this.getStreamsFromAllAddons(type, videoId, {
+    const promise = this.getStreamsFromAllAddons(type, videoId, {
       ...options,
       backgroundPrefetch: true
     }).finally(() => {
-      if (this.prefetchKey === key) {
-        this.prefetchKey = "";
-        this.prefetchPromise = null;
+      if (this.prefetchPromises.get(key) === promise) {
+        this.prefetchPromises.delete(key);
       }
     });
-    return this.prefetchPromise;
+    this.prefetchPromises.set(key, promise);
+    return promise;
   }
 
   async getStreamsFromAddon(baseUrl, type, videoId) {
@@ -99,12 +98,9 @@ class StreamRepository {
       });
       return cached;
     }
-    if (
-      !options?.backgroundPrefetch &&
-      this.prefetchKey === cacheKey &&
-      this.prefetchPromise
-    ) {
-      const prefetched = await this.prefetchPromise.catch(() => null);
+    const pendingPrefetch = this.prefetchPromises.get(cacheKey);
+    if (!options?.backgroundPrefetch && pendingPrefetch) {
+      const prefetched = await pendingPrefetch.catch(() => null);
       if (prefetched?.status === "success") {
         return prefetched;
       }

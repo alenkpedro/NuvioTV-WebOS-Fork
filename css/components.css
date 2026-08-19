@@ -11849,7 +11849,7 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   white-space: nowrap;
 }
 
-.player-ui-root.stats-for-nerds-visible .player-controls-top {
+.player-ui-root.stats-for-nerds-visible .player-clock-stack {
   margin-right: min(41.7vw, 800px);
 }
 
@@ -12097,13 +12097,48 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
 }
 
 .player-controls-top {
-  align-self: flex-end;
-  text-align: right;
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: min(2.5vw, 48px);
   position: relative;
   z-index: 1;
   color: rgba(245, 249, 255, 0.9);
   text-shadow: none;
   transition: opacity 160ms ease;
+}
+
+.player-clock-stack {
+  flex: 0 0 auto;
+  margin-left: auto;
+  text-align: right;
+}
+
+.player-stream-technical-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: min(0.42vw, 8px);
+  max-width: min(54vw, 1040px);
+}
+
+.player-stream-technical-badges.hidden {
+  display: none;
+}
+
+.player-stream-technical-badge {
+  min-height: min(1.77vw, 34px);
+  padding: min(0.21vw, 4px) min(0.63vw, 12px);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: min(0.42vw, 8px);
+  background: rgba(238, 238, 238, 0.86);
+  color: #242424;
+  font-size: min(1.04vw, 20px);
+  font-weight: 750;
+  line-height: 1.2;
+  box-sizing: border-box;
 }
 
 .player-clock {
@@ -12136,6 +12171,34 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   font-size: 28px;
   font-weight: 700;
   line-height: 1.18;
+}
+
+.player-title-identity {
+  min-width: 0;
+}
+
+.player-title-logo {
+  display: none;
+  width: auto;
+  max-width: min(25vw, 480px);
+  height: auto;
+  max-height: min(8.33vw, 160px);
+  object-fit: contain;
+  object-position: left bottom;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.48));
+}
+
+.player-title-identity.logo-loaded .player-title-logo {
+  display: block;
+}
+
+.player-title-identity.logo-loaded .player-title,
+.player-title-identity.logo-failed .player-title-logo {
+  display: none;
+}
+
+.player-title-identity.logo-failed .player-title {
+  display: block;
 }
 
 .player-subtitle {
@@ -13298,7 +13361,7 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
 .player-parental-guide {
   position: absolute;
   left: 64px;
-  top: 48px;
+  top: min(5.21vw, 100px);
   z-index: 34;
   display: flex;
   align-items: flex-start;

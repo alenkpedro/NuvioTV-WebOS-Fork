@@ -3,9 +3,9 @@
   "author": "Pedro Alencar",
   "private": true,
   "type": "module",
-  "version": "0.3.41001",
+  "version": "0.3.41002",
   "upstreamVersion": "0.3.41",
-  "forkRevision": "nt1",
+  "forkRevision": "nt2",
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepare": "husky || true",

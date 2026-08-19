@@ -9366,6 +9366,7 @@ export const HomeScreen = {
     if (
       anchorRow instanceof HTMLElement &&
       anchorRow === this.lastHomeLazyImageHydrationAnchorRow &&
+      anchorNode === this.lastHomeLazyImageHydrationAnchorNode &&
       !refreshIndex &&
       !this.homeLazyImageHydrationNeedsFullScan &&
       !this.homeLazyImageHydrationNeedsIndexRefresh &&
@@ -9427,15 +9428,14 @@ export const HomeScreen = {
     if (
       !forceFullScan &&
       anchorRow instanceof HTMLElement &&
-      anchorRow === this.lastHomeLazyImageHydrationAnchorRow
+      anchorRow === this.lastHomeLazyImageHydrationAnchorRow &&
+      anchorNode === this.lastHomeLazyImageHydrationAnchorNode
     ) {
-      // The first pass for a focused row hydrates every image in that row. On
-      // subsequent horizontal moves, the viewport geometry for every other row
-      // is unchanged, so rescanning and measuring all distant lazy images only
-      // repeats work on the D-pad hot path.
+      // The focused card and its nearby image window are already hydrated.
       return;
     }
     this.lastHomeLazyImageHydrationAnchorRow = anchorRow;
+    this.lastHomeLazyImageHydrationAnchorNode = anchorNode || null;
     const imageRows =
       refreshIndex || !Array.isArray(this.homeLazyImageHydrationIndex)
         ? this.buildHomeLazyImageHydrationIndex()
@@ -9455,6 +9455,9 @@ export const HomeScreen = {
         return;
       }
       const shouldHydrateFocusedRow = Boolean(anchorRow && row === anchorRow);
+      if (anchorRow && !forceFullScan && !shouldHydrateFocusedRow) {
+        return;
+      }
       if (!shouldHydrateFocusedRow && row instanceof HTMLElement) {
         const rowRect = row.getBoundingClientRect();
         const isRowNearViewport =
@@ -9473,7 +9476,10 @@ export const HomeScreen = {
           image.removeAttribute("data-src");
           return;
         }
-        if (!shouldHydrateFocusedRow) {
+        const focusedCard = anchorNode?.closest?.(".home-content-card") || anchorNode;
+        const imageCard = image.closest?.(".home-content-card") || image;
+        const isFocusedCardImage = Boolean(focusedCard && imageCard === focusedCard);
+        if (!isFocusedCardImage) {
           const rect = image.getBoundingClientRect();
           const isNearViewport =
             rect.bottom >= viewportRect.top - verticalMargin &&
@@ -11089,6 +11095,7 @@ export const HomeScreen = {
     this.homeLazyImageHydrationNeedsIndexRefresh = false;
     this.homeLazyImageHydrationIndex = null;
     this.lastHomeLazyImageHydrationAnchorRow = null;
+    this.lastHomeLazyImageHydrationAnchorNode = null;
     this.lastDirectionalKeyAtByDirection = {};
     this.homeTruncationScope = null;
     if (this.boundHomeEventContainer) {

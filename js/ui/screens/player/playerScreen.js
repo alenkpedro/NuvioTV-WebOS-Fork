@@ -1,4 +1,5 @@
 import { PlayerController } from "../../../core/player/playerController.js";
+import { buildPlayerTechnicalBadgeLabels } from "../../../core/player/playerOverlayMetadata.js";
 import {
   audioTrackLabelConflictsWithCodec,
   formatAudioCodecName,
@@ -5147,15 +5148,21 @@ export const PlayerScreen = {
           <div class="player-controls-gradient player-controls-gradient-top"></div>
           <div class="player-controls-gradient player-controls-gradient-bottom"></div>
 
-          <div class="player-controls-top${osdClockEnabled ? "" : " hidden"}">
-            <div id="playerClock" class="player-clock">--:--</div>
-            <div id="playerEndsAt" class="player-ends-at">${escapeHtml(t("player_ends_at", ["--:--"], "Ends at %1$s"))}</div>
+          <div class="player-controls-top">
+            <div id="playerStreamBadges" class="player-stream-technical-badges"></div>
+            <div class="player-clock-stack${osdClockEnabled ? "" : " hidden"}">
+              <div id="playerClock" class="player-clock">--:--</div>
+              <div id="playerEndsAt" class="player-ends-at">${escapeHtml(t("player_ends_at", ["--:--"], "Ends at %1$s"))}</div>
+            </div>
           </div>
 
           <div class="player-controls-bottom">
             <div class="player-meta-actions-row">
               <div class="player-meta">
-                <div class="player-title">${escapeHtml(header.title)}</div>
+                <div id="playerTitleIdentity" class="player-title-identity${this.params?.playerLogoUrl ? " has-logo" : ""}">
+                  ${this.params?.playerLogoUrl ? `<img id="playerTitleLogo" class="player-title-logo" src="${escapeAttribute(this.params.playerLogoUrl)}" alt="${escapeAttribute(header.title)}" />` : ""}
+                  <div id="playerTitleFallback" class="player-title">${escapeHtml(header.title)}</div>
+                </div>
                 ${header.subtitle ? `<div class="player-subtitle">${escapeHtml(header.subtitle)}</div>` : ""}
                 ${header.meta ? `<div class="player-meta-tertiary">${escapeHtml(header.meta)}</div>` : ""}
               </div>
@@ -5188,6 +5195,8 @@ export const PlayerScreen = {
     this.cachePlayerUiRefs(root);
     this.syncPlayerOverlayLayoutState();
     this.bindLoadingLogoFallback();
+    this.bindPlayerTitleLogoFallback();
+    this.syncPlayerStreamIdentity();
     if (!this.isExternalFrameMode()) {
       this.renderControlButtons();
       this.renderSubtitleDialog();
@@ -5218,6 +5227,10 @@ export const PlayerScreen = {
             "#playerTorrentOverlay .player-torrent-overlay-detail"
           ),
           statsForNerds: uiRoot.querySelector("#playerStatsForNerds"),
+          streamBadges: uiRoot.querySelector("#playerStreamBadges"),
+          titleIdentity: uiRoot.querySelector("#playerTitleIdentity"),
+          titleLogo: uiRoot.querySelector("#playerTitleLogo"),
+          titleFallback: uiRoot.querySelector("#playerTitleFallback"),
           loadingIdentity: uiRoot.querySelector(".player-loading-identity"),
           loadingLogoStack: uiRoot.querySelector(".player-loading-logo-stack"),
           loadingLogoBase: uiRoot.querySelector(".player-loading-logo-base"),
@@ -6209,6 +6222,52 @@ export const PlayerScreen = {
         showTitleFallback();
       }
     }
+  },
+
+  bindPlayerTitleLogoFallback() {
+    const identity = this.uiRefs?.titleIdentity;
+    const logo = this.uiRefs?.titleLogo;
+    if (!identity || !logo) {
+      return;
+    }
+    const showLogo = () => {
+      identity.classList.add("logo-loaded");
+      identity.classList.remove("logo-failed");
+    };
+    const showTitleFallback = () => {
+      identity.classList.add("logo-failed");
+      identity.classList.remove("logo-loaded");
+    };
+    logo.addEventListener("load", showLogo, { once: true });
+    logo.addEventListener("error", showTitleFallback, { once: true });
+    if (logo.complete) {
+      if (logo.naturalWidth > 0 && logo.naturalHeight > 0) {
+        showLogo();
+      } else {
+        showTitleFallback();
+      }
+    }
+  },
+
+  syncPlayerStreamIdentity() {
+    const badges = this.uiRefs?.streamBadges;
+    if (!badges) {
+      return;
+    }
+    const video = PlayerController.video || null;
+    const labels = buildPlayerTechnicalBadgeLabels(this.getCurrentStreamCandidate?.() || {}, {
+      videoWidth: Number(video?.videoWidth || 0),
+      videoHeight: Number(video?.videoHeight || 0)
+    });
+    const signature = labels.join("\u0000");
+    if (signature === this.lastPlayerStreamBadgeSignature) {
+      return;
+    }
+    this.lastPlayerStreamBadgeSignature = signature;
+    badges.classList.toggle("hidden", !labels.length);
+    badges.innerHTML = labels
+      .map((label) => `<span class="player-stream-technical-badge">${escapeHtml(label)}</span>`)
+      .join("");
   },
 
   getPlayerUiState() {
@@ -9446,6 +9505,15 @@ export const PlayerScreen = {
     firstButton?.focus?.();
   },
 
+  revealControlsForDirection(direction = "down") {
+    this.autoHideControlsAfterSeek = false;
+    this.setControlsVisible(true, { focus: false });
+    const targetGroup = direction === "up" ? "utility" : "primary";
+    if (!this.focusControlGroup(targetGroup)) {
+      this.focusFirstControl();
+    }
+  },
+
   focusProgressBar() {
     if (!this.isSeekBarAvailable()) {
       this.stickyProgressFocus = false;
@@ -10534,6 +10602,7 @@ export const PlayerScreen = {
 
     this.syncPauseOverlayState();
     this.renderNextEpisodeCard();
+    this.syncPlayerStreamIdentity();
     this.syncStatsForNerds();
 
     if (this.seekOverlayVisible && this.seekPreviewSeconds == null) {
@@ -19426,7 +19495,7 @@ export const PlayerScreen = {
         return;
       }
       if (keyCode === 38 || keyCode === 40) {
-        this.setControlsVisible(true, { focus: true });
+        this.revealControlsForDirection(keyCode === 38 ? "up" : "down");
         return;
       }
     }
@@ -19455,13 +19524,11 @@ export const PlayerScreen = {
         return;
       }
       if (keyCode === 38) {
-        this.autoHideControlsAfterSeek = false;
-        this.setControlsVisible(true, { focus: true });
+        this.revealControlsForDirection("up");
         return;
       }
       if (keyCode === 40) {
-        this.autoHideControlsAfterSeek = false;
-        this.setControlsVisible(true, { focus: true });
+        this.revealControlsForDirection("down");
         return;
       }
       if (isSelectKeyCode(keyCode)) {
