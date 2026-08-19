@@ -1,0 +1,24 @@
+name: Import NuvioWeb upstream
+
+on:
+  push:
+    paths:
+      - '.github/workflows/import-nuvioweb-upstream.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone official NuvioWeb and replace main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+        run: |
+          git clone --depth 1 https://github.com/NuvioMedia/NuvioWeb.git upstream
+          cd upstream
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git"
+          git push origin HEAD:main --force
