@@ -22,8 +22,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm install
@@ -56,14 +54,19 @@ jobs:
         shell: bash
         run: |
           if gh release view webos-latest >/dev/null 2>&1; then
-            gh release delete webos-latest --yes --cleanup-tag
+            gh release upload webos-latest "${{ steps.pkg.outputs.ipk }}" --clobber
+            gh release edit webos-latest \
+              --title "Nuvio Enhanced webOS ${{ steps.pkg.outputs.version }}" \
+              --notes "Automatic LG webOS development build from main. Inspired by ysosrs123/NuvioTV-Fork; webOS platform layer adapted for LG TV." \
+              --prerelease
+          else
+            gh release create webos-latest \
+              "${{ steps.pkg.outputs.ipk }}" \
+              --target "${GITHUB_SHA}" \
+              --title "Nuvio Enhanced webOS ${{ steps.pkg.outputs.version }}" \
+              --notes "Automatic LG webOS development build from main. Inspired by ysosrs123/NuvioTV-Fork; webOS platform layer adapted for LG TV." \
+              --prerelease
           fi
-          gh release create webos-latest \
-            "${{ steps.pkg.outputs.ipk }}" \
-            --target "${GITHUB_SHA}" \
-            --title "Nuvio Enhanced webOS ${{ steps.pkg.outputs.version }}" \
-            --notes "Automatic LG webOS development build from main. Inspired by ysosrs123/NuvioTV-Fork; webOS platform layer adapted for LG TV." \
-            --prerelease
 
       - name: Commit Homebrew manifest
         shell: bash
