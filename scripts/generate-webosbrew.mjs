@@ -17,7 +17,7 @@ const repo = process.env.GITHUB_REPOSITORY?.split('/')[1] || 'NuvioTV-WebOS-Fork
 const tag = process.env.RELEASE_TAG || 'webos-latest';
 const sourceUrl = `https://github.com/${owner}/${repo}`;
 const ipkUrl = `https://github.com/${owner}/${repo}/releases/download/${tag}/${filename}`;
-const iconUri = 'https://raw.githubusercontent.com/ysosrs123/NuvioTV-Fork/nuvio-test/assets/brand/app_logo_mark.png';
+const iconUri = 'https://raw.githubusercontent.com/ysosrs123/NuvioTV-Fork/nuvio-test/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png';
 const output = {
   paging: { page: 1, count: 1, maxPage: 1, itemsTotal: 1 },
   packages: [{
