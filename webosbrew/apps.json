@@ -9,14 +9,14 @@
     {
       "id": "com.nuvio.tv.test",
       "title": "Nuvio-test",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-WebOS-Fork/main/assets/images/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-WebOS-Fork/refs/heads/main/assets/images/icon.png",
       "manifest": {
         "id": "com.nuvio.tv.test",
         "version": "0.3.41001",
         "type": "web",
         "title": "Nuvio-test",
         "appDescription": "LG webOS fork adapted by Pedro Alencar, with Android optimisation credits to ysosrs123.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-WebOS-Fork/main/assets/images/icon.png",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-WebOS-Fork/refs/heads/main/assets/images/icon.png",
         "sourceUrl": "https://github.com/alenkpedro/NuvioTV-WebOS-Fork",
         "rootRequired": false,
         "ipkUrl": "https://github.com/alenkpedro/NuvioTV-WebOS-Fork/releases/download/v0.3.41-nt1/com.nuvio.tv.test_0.3.41001_all.ipk",

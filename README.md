@@ -84,7 +84,7 @@ Download the latest `.wgt` package from [GitHub Releases](https://github.com/Nuv
 - Enter:
 
 ```text
-https://raw.githubusercontent.com/alenkpedro/NuvioTV-WebOS-Fork/main/webosbrew/apps.json
+https://raw.githubusercontent.com/alenkpedro/NuvioTV-WebOS-Fork/refs/heads/main/webosbrew/apps.json
 ```
 
 - Return to the apps list and install Nuvio TV.
