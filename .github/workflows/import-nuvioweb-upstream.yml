@@ -1,16 +1,16 @@
 name: Import NuvioWeb upstream
 
 on:
-  push:
-    paths:
-      - '.github/workflows/import-nuvioweb-upstream.yml'
   workflow_dispatch:
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
 
 jobs:
   import-upstream:
+    if: github.event_name == 'workflow_dispatch' || github.event.issue.title == '[trigger] import NuvioWeb upstream'
     runs-on: ubuntu-latest
     steps:
       - name: Clone official NuvioWeb and replace main
