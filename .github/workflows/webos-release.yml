@@ -1,0 +1,86 @@
+name: Build LG webOS IPK
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'webosbrew/apps.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate JavaScript
+        run: npm run check
+
+      - name: Build IPK
+        run: npm run package:webos
+
+      - name: Resolve package name
+        id: pkg
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./appinfo.json').version")"
+          IPK="dist/Nuvio-Enhanced-webOS-${VERSION}.ipk"
+          test -f "$IPK"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "ipk=$IPK" >> "$GITHUB_OUTPUT"
+          echo "filename=$(basename "$IPK")" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Homebrew repository manifest
+        env:
+          RELEASE_TAG: webos-latest
+        run: node scripts/generate-webosbrew.mjs "${{ steps.pkg.outputs.ipk }}"
+
+      - name: Publish continuous prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view webos-latest >/dev/null 2>&1; then
+            gh release delete webos-latest --yes --cleanup-tag
+          fi
+          gh release create webos-latest \
+            "${{ steps.pkg.outputs.ipk }}" \
+            --target "${GITHUB_SHA}" \
+            --title "Nuvio Enhanced webOS ${{ steps.pkg.outputs.version }}" \
+            --notes "Automatic LG webOS development build from main. Inspired by ysosrs123/NuvioTV-Fork; webOS platform layer adapted for LG TV." \
+            --prerelease
+
+      - name: Commit Homebrew manifest
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add webosbrew/apps.json
+          if git diff --cached --quiet; then
+            echo "Homebrew manifest unchanged"
+            exit 0
+          fi
+          git commit -m "chore: update webOS Homebrew manifest [skip ci]"
+          git push
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nuvio-Enhanced-webOS-${{ steps.pkg.outputs.version }}
+          path: ${{ steps.pkg.outputs.ipk }}
+          if-no-files-found: error
