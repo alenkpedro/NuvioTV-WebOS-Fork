@@ -16776,17 +16776,24 @@ export const PlayerScreen = {
 
   openAudioDialog() {
     this.cancelSeekPreview({ commit: false });
-    this.syncTrackState();
-    this.applyAudioAmplification();
     this.audioDialogVisible = true;
     this.audioDialogMode = "tracks";
     this.subtitleDialogVisible = false;
     this.speedDialogVisible = false;
     this.sourcesPanelVisible = false;
-    let entries = this.getAudioEntries();
-    if (!entries.length) {
-      this.ensureTrackDataWarmup();
+    try {
+      this.syncTrackState();
+    } catch (error) {
+      console.warn("Audio track state refresh failed", error);
+    }
+    if (!Environment.isWebOS()) {
+      this.applyAudioAmplification();
+    }
+    let entries = [];
+    try {
       entries = this.getAudioEntries();
+    } catch (error) {
+      console.warn("Audio track list could not be read", error);
     }
     const selectedEntry = entries.findIndex((entry) => entry.selected);
     this.audioDialogIndex = Math.max(0, selectedEntry >= 0 ? selectedEntry : 0);
@@ -17044,6 +17051,19 @@ export const PlayerScreen = {
       return;
     }
 
+    try {
+      this.renderAudioDialogContent(dialog);
+    } catch (error) {
+      console.warn("Audio dialog render failed", error);
+      dialog.classList.remove("is-settings");
+      dialog.innerHTML = `
+        <div class="player-dialog-title">${escapeHtml(t("audio_dialog_title", {}, "Audio"))}</div>
+        <div class="player-dialog-divider"></div>
+        <div class="player-dialog-empty">${escapeHtml(t("audio_tracks_unavailable", {}, "Audio tracks are temporarily unavailable"))}</div>`;
+    }
+  },
+
+  renderAudioDialogContent(dialog) {
     const mode = this.audioDialogMode === "settings" ? "settings" : "tracks";
     dialog.classList.toggle("is-settings", mode === "settings");
     const entries = this.getAudioEntries();

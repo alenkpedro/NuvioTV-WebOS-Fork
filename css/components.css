@@ -22499,8 +22499,6 @@ html[data-card-depth="true"][data-card-depth-trailers="true"] .detail-trailer-ca
   background: rgba(0, 0, 0, 0.85);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
   overflow: hidden;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
 }
 
 .player-subtitle-modal .player-dialog-title,
